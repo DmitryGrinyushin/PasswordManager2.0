@@ -16,6 +16,7 @@ int main() {
     bool dbExists = fileExists(DB_PATH);
 
     sqlite3* db;
+    fs::create_directories("data");
     int rc = sqlite3_open(DB_PATH.c_str(), &db);
 
     if (rc != SQLITE_OK) {
@@ -58,13 +59,12 @@ int main() {
             return 1;
         }
     
-        std::cout << "The database was created with tables users and passwords." << std::endl;
+        std::cout << "Database created with tables 'users' and 'passwords'.\n" << std::endl;
     }
     else {
-        std::cout << "The database was found and connected." << std::endl;
+        std::cout << "Database file found. Connection established.\n" << std::endl;
     }
     
     sqlite3_close(db);
     return 0;
-    
 }
