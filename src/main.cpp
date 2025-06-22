@@ -1,3 +1,4 @@
+#include "Logger.h"
 #include <iostream>
 #include <string>
 #include <filesystem>
@@ -10,6 +11,13 @@ bool fileExists(const std::string& filename) {
 }
 
 int main() {
+    try {
+        Logger& logger = Logger::getInstance();
+        logger.log(LogLevel::INFO, "Starting application");
+    } catch (const std::exception& ex) {
+        std::cerr << "Logfile initialization error: " << ex.what() << std::endl;
+        return 1;
+    }
 
     const std::string DB_PATH = "data/passdb.sqlite";
 
