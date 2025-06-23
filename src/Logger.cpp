@@ -17,7 +17,7 @@ Logger& Logger::getInstance() {
 Logger::Logger () {
     logFile.open("log.txt", std::ios::app);
     if (!logFile.is_open()) {
-        throw std::runtime_error("Cannot open logfile.");
+        throw std::runtime_error("Cannot open logfile");
     }
 }
 
