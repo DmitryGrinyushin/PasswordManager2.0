@@ -5,12 +5,6 @@
 #include <filesystem>
 #include <sqlite3.h>
 
-namespace fs = std::filesystem;
-
-bool fileExists(const std::string& filename) {
-    return (fs::exists(filename));
-}
-
 int main() {
     try {
         Logger& logger = Logger::getInstance();
