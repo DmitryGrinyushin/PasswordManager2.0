@@ -16,7 +16,10 @@ void DatabaseManager::initialize() {
 
     bool dbExists = fileExists(dbPath);
 
-    fs::create_directories("data");
+    fs::path parentDir = fs::path(dbPath).parent_path();
+    if (!parentDir.empty()) {
+        fs::create_directories(parentDir);
+    }
     int rc = sqlite3_open(dbPath.c_str(), &db);
 
     if (rc != SQLITE_OK) {

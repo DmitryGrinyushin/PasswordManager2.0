@@ -1,4 +1,5 @@
 #include "Logger.h"
+#include "EnvUtils.h"
 #include <iostream>
 #include <fstream>
 #include <ctime>
@@ -15,7 +16,8 @@ Logger& Logger::getInstance() {
 }
 
 Logger::Logger () {
-    logFile.open("log.txt", std::ios::app);
+    std::string logPath = getEnvOrDefault("PASSWORD_MANAGER_LOG_PATH", "log.txt");
+    logFile.open(logPath, std::ios::app);
     if (!logFile.is_open()) {
         throw std::runtime_error("Cannot open logfile");
     }
@@ -45,4 +47,3 @@ void Logger::log(LogLevel level, const std::string& message) {
 Logger::~Logger () {
     logFile.close();
 }
-
