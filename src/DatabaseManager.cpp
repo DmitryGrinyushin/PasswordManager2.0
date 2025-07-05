@@ -3,6 +3,7 @@
 #include <iostream>
 #include <filesystem>
 #include <sqlite3.h>
+#include <stdexcept>
 
 namespace fs = std::filesystem;
 

@@ -5,6 +5,7 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
 
 Logger* Logger::instance = nullptr;
 

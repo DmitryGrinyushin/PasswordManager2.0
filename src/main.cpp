@@ -18,7 +18,7 @@ int main() {
         dbManager.initialize();
 
     } catch (const std::exception& ex) {
-        std::cerr << "Fatal error: " << ex.what() << std::endl;
+        std::cerr << "Error: " << ex.what() << std::endl;
         return 1;
     }
     return 0;
