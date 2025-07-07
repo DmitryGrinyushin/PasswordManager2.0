@@ -79,3 +79,27 @@ bool UserManager::userExists(const std::string& username) {
 
     return (count > 0);
 }
+
+void UserManager::deleteUser(const std::string& username) {
+    if (!userExists(username)) {
+        std::string errorMessage = "Deletion error: user \"" + username + "\" doesn't exist.";
+        Logger::getInstance().log(LogLevel::ERROR, errorMessage);
+        throw std::runtime_error(errorMessage);
+    }
+
+    const char* sql = "DELETE FROM users WHERE username = ?;";
+
+    StatementWrapper stmt(db, sql);
+
+    sqlite3_bind_text(stmt.get(), 1, username.c_str(), -1, SQLITE_STATIC);
+
+    int rc = stmt.step();
+    if (rc != SQLITE_DONE) {
+        std::string errorMessage = std::string("Error deleting user: ") + sqlite3_errmsg(db);
+        Logger::getInstance().log(LogLevel::ERROR, errorMessage);
+        throw std::runtime_error(errorMessage);
+    }
+
+    std::cout << "Successful deletion" << std::endl;
+    Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" successfully deleted.");
+}
