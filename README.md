@@ -8,7 +8,7 @@ A simple C++ password manager with SQLite storage and environment-based configur
 These variables configure the database and log file locations:
 
 ```bash
-export PASSWORD_MANAGER_DB_PATH="$HOME/PassManager2/data/passdb.sqlite"
+export PASSWORD_MANAGER_DB_PATH="$HOME/NewProject/PassManager2/data/passdb.sqlite"
 export PASSWORD_MANAGER_LOG_PATH="$HOME/NewProject/PassManager2/log.txt"
 ```
 
