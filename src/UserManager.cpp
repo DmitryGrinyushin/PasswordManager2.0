@@ -24,7 +24,7 @@ void UserManager::registerUser(const std::string& username, const std::string& p
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {
-        std::string errorMessage = std::string("Error inserting user: ") + sqlite3_errmsg(db);
+        std::string errorMessage = std::string("Registration error: failed to insert user \"") + username + "\" " + sqlite3_errmsg(db);
         Logger::getInstance().log(LogLevel::ERROR, errorMessage);
         throw std::runtime_error(errorMessage);
     }
@@ -42,7 +42,7 @@ bool UserManager::loginUser(const std::string& username, const std::string& pass
 
     int rc = stmt.step(); // SELECT COUNT(*) always returns exactly one row
     if (rc != SQLITE_ROW) {
-        std::string errorMessage = std::string("Login error: ") + sqlite3_errmsg(db);
+        std::string errorMessage = std::string("Login error: query failed for user \"") + username + "\". " + sqlite3_errmsg(db);
         Logger::getInstance().log(LogLevel::ERROR, errorMessage);
         throw std::runtime_error(errorMessage);
     }
@@ -95,7 +95,7 @@ void UserManager::deleteUser(const std::string& username) {
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {
-        std::string errorMessage = std::string("Error deleting user: ") + sqlite3_errmsg(db);
+        std::string errorMessage = std::string("Deletion error: failed to delete user \"") + username + "\" " + sqlite3_errmsg(db);
         Logger::getInstance().log(LogLevel::ERROR, errorMessage);
         throw std::runtime_error(errorMessage);
     }
