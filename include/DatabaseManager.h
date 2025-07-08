@@ -13,5 +13,7 @@ public:
     DatabaseManager(const std::string& path);
     void initialize();
 
+    sqlite3* getDb();
+
     ~DatabaseManager();
 };

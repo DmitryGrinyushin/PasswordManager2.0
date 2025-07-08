@@ -1,5 +1,6 @@
 #include "Logger.h"
 #include "DatabaseManager.h"
+#include "UserManager.h"
 #include "EnvUtils.h"
 #include <iostream>
 #include <string>
@@ -17,9 +18,17 @@ int main() {
         DatabaseManager dbManager(dbPath);
         dbManager.initialize();
 
+        // TODO: Temporary testing functionality - remove before production
+        UserManager userManager(dbManager.getDb());
+        userManager.registerUser("testuser", "password123");
+        userManager.loginUser("testuser", "password123");
+        userManager.deleteUser("testuser");
+        // ======
+
     } catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;
         return 1;
     }
+
     return 0;
 }

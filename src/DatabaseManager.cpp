@@ -79,6 +79,10 @@ void DatabaseManager::createTables() {
 
 }
 
+sqlite3* DatabaseManager::getDb() {
+    return db;
+}
+
 DatabaseManager::~DatabaseManager() {
     sqlite3_close(db);
 }
