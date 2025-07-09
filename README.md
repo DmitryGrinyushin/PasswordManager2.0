@@ -61,3 +61,22 @@ Then execute the test binary:
 ```bash
 ./bin/test_user_manager
 ```
+
+
+Example: Build and run the DatabaseManager test
+
+```bash
+g++ -std=c++17 \
+  tests/test_database_manager.cpp \
+  src/DatabaseManager.cpp \
+  src/Logger.cpp \
+  -Iinclude \
+  -lsqlite3 \
+  -o bin/test_database_manager
+  ```
+
+Then execute the test binary:
+
+```bash
+./bin/test_database_manager
+```

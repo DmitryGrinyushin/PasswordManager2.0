@@ -26,3 +26,15 @@ TEST_CASE("Database creating in memory", "[db][memory]") {
         sqlite3_finalize(stmt);
     }
 }
+
+TEST_CASE("Database creating in directory", "[db][file]") {
+    std::string dbPath = "tests/test_db.sqlite";
+
+    SECTION("Multiple database initialization does not throw") {
+        DatabaseManager dbManager(dbPath);
+        dbManager.initialize();
+        REQUIRE(std::filesystem::exists(dbPath) == true);
+        REQUIRE_NOTHROW(dbManager.initialize());
+    }
+    std::remove("tests/test_db.sqlite");
+}
