@@ -35,3 +35,29 @@ g++ -std=c++17 -Iinclude src/*.cpp -lsqlite3 -o bin/PasswordManager
 ```bash
 ./bin/PasswordManager
 ```
+
+
+## Running tests
+
+This project uses Catch2 for unit testing.
+You can build the tests manually with g++.
+
+Example: Build and run the UserManager test
+
+```bash
+g++ -std=c++17 \
+  tests/test_user_manager.cpp \
+  src/UserManager.cpp \
+  src/DatabaseManager.cpp \
+  src/StatementWrapper.cpp \
+  src/Logger.cpp \
+  -Iinclude \
+  -lsqlite3 \
+  -o bin/test_user_manager
+```
+
+Then execute the test binary:
+
+```bash
+./bin/test_user_manager
+```

@@ -6,8 +6,7 @@
 #include "Logger.h"
 
 TEST_CASE("UserManager basic operations", "[user]") {
-    // preparation
-    std::string testDbPath = ":memory:";
+    std::string testDbPath = ":memory:"; // Database in RAM - recreated every SECTION request.
     DatabaseManager dbManager(testDbPath);
     dbManager.initialize();
 
