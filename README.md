@@ -18,7 +18,7 @@ export PASSWORD_MANAGER_LOG_PATH="$HOME/NewProject/PassManager2/log.txt"
 A C++17-compatible compiler is required:
 
 ```bash
-g++ -std=c++17 -Iinclude src/*.cpp -lsqlite3 -o bin/PasswordManager
+g++ -std=c++17 -Iinclude -I/opt/homebrew/opt/openssl@3/include src/*.cpp -L/opt/homebrew/opt/openssl@3/lib -lssl -lcrypto -lsqlite3 -o bin/PasswordManager
 ```
 
 
