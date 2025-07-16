@@ -39,45 +39,51 @@ void DatabaseManager::initialize() {
     }
 }
 
+void DatabaseManager::executeSQL(const char* tableSQL, const std::string& tableName) {
+    char* errMsg = nullptr;
+    int rc = sqlite3_exec(db, tableSQL, nullptr, nullptr, &errMsg);
+    if (rc != SQLITE_OK) {
+        std::string errorMessage = std::string("Error creating table ") + tableName + ": " + errMsg;
+        sqlite3_free(errMsg);
+        Logger::getInstance().log(LogLevel::ERROR, errorMessage);
+        throw std::runtime_error(errorMessage);
+    }
+}
+
 void DatabaseManager::createTables() {
 
     const char* createUsersTable = 
-        "CREATE TABLE users ("
+        "CREATE TABLE IF NOT EXISTS users ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,"
         "username TEXT NOT NULL UNIQUE,"
         "password_hash TEXT NOT NULL,"
         "salt TEXT NOT NULL);";
 
     const char* createPasswordsTable = 
-        "CREATE TABLE passwords ("
+        "CREATE TABLE IF NOT EXISTS passwords ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,"
         "value TEXT NOT NULL,"
         "type TEXT,"
         "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);";
 
-    char* errMsg = nullptr;
+    const char* createAccountsTable =
+        "CREATE TABLE IF NOT EXISTS accounts ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "user_id INTEGER NOT NULL,"
+        "account_name TEXT NOT NULL,"
+        "login TEXT,"
+        "password_hash TEXT,"
+        "notes TEXT,"
+        "created_at TEXT DEFAULT CURRENT_TIMESTAMP,"
+        "updated_at TEXT DEFAULT CURRENT_TIMESTAMP,"
+        "FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);";
 
-    // Creating a table users
-    int rc = sqlite3_exec(db, createUsersTable, nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        std::string errorMessage = std::string("Error creating a table users: ") + errMsg;
-        sqlite3_free(errMsg);
-        Logger::getInstance().log(LogLevel::ERROR, errorMessage);
-        throw std::runtime_error(errorMessage);
-    }
+    executeSQL(createUsersTable, "users");
+    executeSQL(createPasswordsTable, "passwords");
+    executeSQL(createAccountsTable, "accounts");
 
-    // Creating a table passwords
-    rc = sqlite3_exec(db, createPasswordsTable, nullptr, nullptr, &errMsg);
-    if (rc != SQLITE_OK) {
-        std::string errorMessage = std::string("Error creating a table passwords: ") + errMsg;
-        sqlite3_free(errMsg);
-        Logger::getInstance().log(LogLevel::ERROR, errorMessage);
-        throw std::runtime_error(errorMessage);
-    }
-
-    std::cout << "Database created with tables 'users' and 'passwords'." << std::endl;
+    std::cout << "Database created with tables 'users', 'passwords', 'accounts'." << std::endl;
     Logger::getInstance().log(LogLevel::INFO, "Database created");
-
 }
 
 sqlite3* DatabaseManager::getDb() {

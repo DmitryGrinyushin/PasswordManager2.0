@@ -7,6 +7,7 @@ class DatabaseManager {
     sqlite3* db = nullptr;
     std::string dbPath;
 
+    void executeSQL(const char* tableSQL, const std::string& tableName);
     void createTables();
 
 public:
