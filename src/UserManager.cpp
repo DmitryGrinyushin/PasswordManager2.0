@@ -9,7 +9,7 @@
 
 UserManager::UserManager(sqlite3* database) : db(database) {}
 
-void UserManager::registerUser(const std::string& username, const std::string& password) {
+int UserManager::registerUser(const std::string& username, const std::string& password) {
     if (userExists(username)) {
         std::string errorMessage = "Registration error: user \"" + username + "\" already exists.";
         Logger::getInstance().log(LogLevel::ERROR, errorMessage);
@@ -36,6 +36,8 @@ void UserManager::registerUser(const std::string& username, const std::string& p
 
     std::cout << "Successful registration" << std::endl;
     Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" successfully registered.");
+    int userId = static_cast<int>(sqlite3_last_insert_rowid(db));
+    return userId;
 }
 
 bool UserManager::loginUser(const std::string& username, const std::string& password) {

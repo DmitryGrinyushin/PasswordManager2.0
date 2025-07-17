@@ -40,7 +40,7 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId) {
 
     const char* sql =
         "SELECT id, account_name, login, password_hash, notes, created_at, updated_at "
-        "FROM accounts WHERE user_id = ?;";
+        "FROM accounts WHERE user_id = ? ORDER BY id;";
 
     StatementWrapper stmt(db, sql);
 
