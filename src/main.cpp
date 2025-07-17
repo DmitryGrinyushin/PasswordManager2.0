@@ -61,7 +61,7 @@ int main() {
                       << ", Notes: " << acc.notes << "\n";
         }
 
-        // update first account
+        // update account
         if (!accounts.empty()) {
             accountManager.updateAccount(
                 accounts[0].id,
@@ -72,7 +72,7 @@ int main() {
             );
         }
 
-        // delete first account
+        // delete account
         if (!accounts.empty()) {
             accountManager.deleteAccount(accounts[0].id);
         }
