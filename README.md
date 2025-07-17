@@ -51,8 +51,11 @@ g++ -std=c++17 \
   src/DatabaseManager.cpp \
   src/StatementWrapper.cpp \
   src/Logger.cpp \
+  src/PasswordHasher.cpp \
   -Iinclude \
-  -lsqlite3 \
+  -I/opt/homebrew/opt/openssl@3/include \
+  -L/opt/homebrew/opt/openssl@3/lib \
+  -lssl -lcrypto -lsqlite3 \
   -o bin/test_user_manager
 ```
 
@@ -79,4 +82,29 @@ Then execute the test binary:
 
 ```bash
 ./bin/test_database_manager
+```
+
+
+Example: Build and run the AccountManager test
+
+```bash
+g++ -std=c++17 \
+  tests/test_account_manager.cpp \
+  src/UserManager.cpp \
+  src/AccountManager.cpp \
+  src/DatabaseManager.cpp \
+  src/StatementWrapper.cpp \
+  src/Logger.cpp \
+  src/PasswordHasher.cpp \
+  -Iinclude \
+  -I/opt/homebrew/opt/openssl@3/include \
+  -L/opt/homebrew/opt/openssl@3/lib \
+  -lssl -lcrypto -lsqlite3 \
+  -o bin/test_account_manager
+```
+
+Then execute the test binary:
+
+```bash
+./bin/test_account_manager
 ```

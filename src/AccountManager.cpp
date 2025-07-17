@@ -106,6 +106,13 @@ void AccountManager::updateAccount(int accountId,
         throw std::runtime_error(errorMessage);
     }
 
+    int changes = sqlite3_changes(db);
+    if (changes == 0) {
+        std::string warning = "Update failed: account with ID " + std::to_string(accountId) + " not found.";
+        Logger::getInstance().log(LogLevel::WARNING, warning);
+        throw std::runtime_error(warning);
+    }
+
     std::cout << "Account updated successfully.\n";
     Logger::getInstance().log(LogLevel::INFO, "Account ID " + std::to_string(accountId) + " updated.");
 }
@@ -123,6 +130,13 @@ void AccountManager::deleteAccount(int accountId)
         std::string errorMessage = "Error deleting account: " + std::string(sqlite3_errmsg(db));
         Logger::getInstance().log(LogLevel::ERROR, errorMessage);
         throw std::runtime_error(errorMessage);
+    }
+
+    int changes = sqlite3_changes(db);
+    if (changes == 0) {
+        std::string warning = "Delete failed: account with ID " + std::to_string(accountId) + " not found.";
+        Logger::getInstance().log(LogLevel::WARNING, warning);
+        throw std::runtime_error(warning);
     }
 
     std::cout << "Account deleted successfully.\n";
