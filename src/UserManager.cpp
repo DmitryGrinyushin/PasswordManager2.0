@@ -41,13 +41,11 @@ int UserManager::registerUser(const std::string& username, const std::string& pa
 }
 
 bool UserManager::loginUser(const std::string& username, const std::string& password) {
-    //const char* sql = "SELECT COUNT(*) FROM users WHERE username = ? AND password_hash = ?;";
     const char* sql = "SELECT password_hash, salt FROM users WHERE username = ?;";
 
     StatementWrapper stmt(db, sql);
 
     sqlite3_bind_text(stmt.get(), 1, username.c_str(), -1, SQLITE_STATIC);
-    //sqlite3_bind_text(stmt.get(), 2, password.c_str(), -1, SQLITE_STATIC);
 
     int rc = stmt.step(); // SELECT COUNT(*) always returns exactly one row
 

@@ -17,7 +17,7 @@ TEST_CASE("AccountManager basic operations", "[account]") {
 
     AccountManager accountManager(dbManager.getDb());
 
-    SECTION("Account is added") {
+    SECTION("Add account") {
         accountManager.addAccount(userId,
                           "testaccount",
                           "testlogin",
@@ -32,7 +32,7 @@ TEST_CASE("AccountManager basic operations", "[account]") {
         REQUIRE(accounts[0].notes == "testnotes");
     }
 
-    SECTION("Account is updated") {
+    SECTION("Update account") {
         accountManager.addAccount(userId,
                           "testaccount",
                           "testlogin",
@@ -58,7 +58,7 @@ TEST_CASE("AccountManager basic operations", "[account]") {
         REQUIRE(accounts_1[0].notes == "testnotes_1");
     }
 
-    SECTION("Account is deleted") {
+    SECTION("Delete account") {
         accountManager.addAccount(userId,
                           "testaccount",
                           "testlogin",
@@ -75,7 +75,7 @@ TEST_CASE("AccountManager basic operations", "[account]") {
         REQUIRE(accounts_1.size() == 0);
     }
 
-    SECTION("Multiple accounts are added") {
+    SECTION("Add accounts for multiple users") {
         int userId_2 = userManager.registerUser("seconduser", "secondpass");
         userManager.loginUser("seconduser", "secondpass");
 
@@ -108,7 +108,7 @@ TEST_CASE("AccountManager basic operations", "[account]") {
         REQUIRE(accounts_2[0].notes == "testnotes_2");
     }
     
-    SECTION("Multiple accounts for one user are available") {
+    SECTION("Add multiple accounts for a single user") {
         accountManager.addAccount(userId,
                           "testaccount_1",
                           "testlogin_1",
@@ -133,5 +133,52 @@ TEST_CASE("AccountManager basic operations", "[account]") {
         REQUIRE(accounts[1].login == "testlogin_2");
         REQUIRE(accounts[1].passwordHash == "testpasswordHash_2");
         REQUIRE(accounts[1].notes == "testnotes_2");
+    }
+
+    SECTION("Update non-existent account") {
+        accountManager.addAccount(userId,
+                          "testaccount",
+                          "testlogin",
+                          "testpasswordHash",
+                          "testnotes");
+
+        auto accounts = accountManager.getAccountsForUser(userId);
+        REQUIRE(accounts.size() == 1);
+
+        int accountId = accounts[0].id;
+
+        accountManager.deleteAccount(accountId);
+        auto accounts_1 = accountManager.getAccountsForUser(userId);
+        REQUIRE(accounts_1.size() == 0);
+
+        REQUIRE_THROWS_AS(accountManager.updateAccount(accountId,
+                          "testaccount",
+                          "testlogin",
+                          "testpasswordHash",
+                          "testnotes"), std::runtime_error);
+    }
+
+    SECTION("Delete non-existent account") {
+        accountManager.addAccount(userId,
+                          "testaccount",
+                          "testlogin",
+                          "testpasswordHash",
+                          "testnotes");
+
+        auto accounts = accountManager.getAccountsForUser(userId);
+        REQUIRE(accounts.size() == 1);
+
+        int accountId = accounts[0].id;
+
+        accountManager.deleteAccount(accountId);
+        auto accounts_1 = accountManager.getAccountsForUser(userId);
+        REQUIRE(accounts_1.size() == 0);
+        
+        REQUIRE_THROWS_AS(accountManager.deleteAccount(accountId), std::runtime_error);
+    }
+
+    SECTION("Get accounts for non-existent user") {
+        auto accounts = accountManager.getAccountsForUser(99999);
+        REQUIRE(accounts.empty());
     }
 }
