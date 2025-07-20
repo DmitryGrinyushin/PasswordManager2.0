@@ -28,11 +28,12 @@ public:
 
     std::vector<Account> getAccountsForUser(int userId);
 
-    void updateAccount(int accountId,
+    void updateAccount(int userId,
+                        int accountId,
                         const std::string& accountName,
                         const std::string& login,
                         const std::string& passwordHash,
                         const std::string& notes);
 
-    void deleteAccount(int accountId);
+    void deleteAccount(int userId, int accountId);
 };

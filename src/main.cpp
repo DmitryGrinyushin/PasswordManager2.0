@@ -5,6 +5,7 @@
 #include "StatementWrapper.h"
 #include "EnvUtils.h"
 #include "PasswordHasher.h"
+#include "PasswordGenerator.h"
 #include <iostream>
 #include <string>
 #include <filesystem>
@@ -30,17 +31,8 @@ int main() {
         if (!userManager.userExists(username)) {
             userManager.registerUser(username, password);
         }
-        userManager.loginUser(username, password);
-
-        // get ID
-        const char* sql = "SELECT id FROM users WHERE username = ?;";
-        StatementWrapper stmt(dbManager.getDb(), sql);
-        sqlite3_bind_text(stmt.get(), 1, username.c_str(), -1, SQLITE_STATIC);
-        int rc = stmt.step();
-        if (rc != SQLITE_ROW) {
-            throw std::runtime_error("Failed to get user ID.");
-        }
-        int userId = sqlite3_column_int(stmt.get(), 0);
+        int userId = userManager.loginUser(username, password);
+        if (userId == -1) throw std::runtime_error("Login failed");
 
         // AccountManager test
         AccountManager accountManager(dbManager.getDb());
@@ -64,6 +56,7 @@ int main() {
         // update account
         if (!accounts.empty()) {
             accountManager.updateAccount(
+                userId,
                 accounts[0].id,
                 "GitHub (updated)",
                 "updated_login@github.com",
@@ -72,16 +65,40 @@ int main() {
             );
         }
 
+        accounts = accountManager.getAccountsForUser(userId);
+         std::cout << "Updated accounts for user ID " << userId << ":\n";
+         for (const auto& acc : accounts) {
+            std::cout << "ID: " << acc.id
+                      << ", Name: " << acc.accountName
+                      << ", Login: " << acc.login
+                      << ", Notes: " << acc.notes << "\n";
+        }
+
         // delete account
         if (!accounts.empty()) {
-            accountManager.deleteAccount(accounts[0].id);
+            accountManager.deleteAccount(userId, accounts[0].id);
         }
 
         // delete test user
         userManager.deleteUser(username);
 
         logger.log(LogLevel::INFO, "Test completed successfully");
-        // ======
+        
+        // PasswordGenerator test
+        PasswordGenerator gen1(PasswordType::digits, 8, 12);
+        PasswordGenerator gen2(PasswordType::letters, 8, 12);
+        PasswordGenerator gen3(PasswordType::capitalLetters, 8, 12);
+        PasswordGenerator gen4(PasswordType::symbols, 8, 12);
+        PasswordGenerator gen5(PasswordType::digitsAndLetters, 8, 12);
+        PasswordGenerator gen6(PasswordType::allChars, 8, 12);
+
+        std::cout << "Digits:           " << gen1() << "\n";
+        std::cout << "Letters:          " << gen2() << "\n";
+        std::cout << "Capital Letters:  " << gen3() << "\n";
+        std::cout << "Symbols:          " << gen4() << "\n";
+        std::cout << "Digits+Letters:   " << gen5() << "\n";
+        std::cout << "All Characters:   " << gen6() << "\n";
+        // =========== to be removed ============
 
     } catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;

@@ -75,7 +75,7 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId) {
     return accounts;
 }
 
-void AccountManager::updateAccount(int accountId,
+void AccountManager::updateAccount(int userId, int accountId,
     const std::string& accountName,
     const std::string& login,
     const std::string& passwordHash,
@@ -88,7 +88,7 @@ void AccountManager::updateAccount(int accountId,
         "password_hash = ?, "
         "notes = ?, "
         "updated_at = CURRENT_TIMESTAMP "
-        "WHERE id = ?;";
+        "WHERE id = ? AND user_Id = ?;";
 
     StatementWrapper stmt(db, sql);
 
@@ -98,6 +98,7 @@ void AccountManager::updateAccount(int accountId,
     sqlite3_bind_text(stmt.get(), 4, notes.c_str(), -1, SQLITE_STATIC);
 
     sqlite3_bind_int(stmt.get(), 5, accountId); // Identification (WHERE id)
+    sqlite3_bind_int(stmt.get(), 6, userId);
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {
@@ -117,13 +118,14 @@ void AccountManager::updateAccount(int accountId,
     Logger::getInstance().log(LogLevel::INFO, "Account ID " + std::to_string(accountId) + " updated.");
 }
 
-void AccountManager::deleteAccount(int accountId)
+void AccountManager::deleteAccount(int userId, int accountId)
 {
-    const char* sql = "DELETE FROM accounts WHERE id = ?;";
+    const char* sql = "DELETE FROM accounts WHERE id = ? AND user_id = ?;";
 
     StatementWrapper stmt(db, sql);
 
     sqlite3_bind_int(stmt.get(), 1, accountId); // ID connection
+    sqlite3_bind_int(stmt.get(), 2, userId);
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {
