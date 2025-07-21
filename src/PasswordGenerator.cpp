@@ -58,6 +58,32 @@ std::string PasswordGenerator::operator()() {
         ++j;
     }
 
+    if (allowedChars == toString(PasswordType::digitsAndLetters)) {
+        const std::string digits = toString(PasswordType::digits);
+        std::uniform_int_distribution<size_t> digitsDist(0, digits.size() - 1);
+        password += digits[digitsDist(rng)];
+        ++j;
+        const std::string uppercaseLetters = toString(PasswordType::uppercaseLetters);
+        std::uniform_int_distribution<size_t> uppercaseLettersDist(0, uppercaseLetters.size() - 1);
+        password += uppercaseLetters[uppercaseLettersDist(rng)];
+        ++j;
+        const std::string lowercaseLetters = toString(PasswordType::lowercaseLetters);
+        std::uniform_int_distribution<size_t> lowercaseLettersDist(0, lowercaseLetters.size() - 1);
+        password += lowercaseLetters[lowercaseLettersDist(rng)];
+        ++j;
+    }
+
+    if (allowedChars == toString(PasswordType::letters)) {
+        const std::string uppercaseLetters = toString(PasswordType::uppercaseLetters);
+        std::uniform_int_distribution<size_t> uppercaseLettersDist(0, uppercaseLetters.size() - 1);
+        password += uppercaseLetters[uppercaseLettersDist(rng)];
+        ++j;
+        const std::string lowercaseLetters = toString(PasswordType::lowercaseLetters);
+        std::uniform_int_distribution<size_t> lowercaseLettersDist(0, lowercaseLetters.size() - 1);
+        password += lowercaseLetters[lowercaseLettersDist(rng)];
+        ++j;
+    }
+
     for (int i = j; i < length; ++i) {
         password += allowedChars[charDist(rng)];
     }
