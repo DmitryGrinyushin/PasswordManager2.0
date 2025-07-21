@@ -5,7 +5,8 @@ const char* PasswordGenerator::toString(PasswordType type) {
         switch(type) {
             case PasswordType::digits: return "0123456789";
             case PasswordType::letters: return "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm";
-            case PasswordType::capitalLetters: return "QWERTYUIOPASDFGHJKLZXCVBNM";
+            case PasswordType::uppercaseLetters: return "QWERTYUIOPASDFGHJKLZXCVBNM";
+            case PasswordType::lowercaseLetters: return "qwertyuiopasdfghjklzxcvbnm";
             case PasswordType::symbols: return "!@#$%&*";
             case PasswordType::digitsAndLetters: return "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789";
             case PasswordType::allChars: return "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm0123456789!@#$%&*";
@@ -37,9 +38,31 @@ std::string PasswordGenerator::operator()() {
     std::string password;
     password.reserve(length);
 
-    for (int i = 0; i < length; ++i) {
+    int j = 0;
+    if (allowedChars == toString(PasswordType::allChars)) {
+        const std::string digits = toString(PasswordType::digits);
+        std::uniform_int_distribution<size_t> digitsDist(0, digits.size() - 1);
+        password += digits[digitsDist(rng)];
+        ++j;
+        const std::string uppercaseLetters = toString(PasswordType::uppercaseLetters);
+        std::uniform_int_distribution<size_t> uppercaseLettersDist(0, uppercaseLetters.size() - 1);
+        password += uppercaseLetters[uppercaseLettersDist(rng)];
+        ++j;
+        const std::string lowercaseLetters = toString(PasswordType::lowercaseLetters);
+        std::uniform_int_distribution<size_t> lowercaseLettersDist(0, lowercaseLetters.size() - 1);
+        password += lowercaseLetters[lowercaseLettersDist(rng)];
+        ++j;
+        const std::string symbols = toString(PasswordType::symbols);
+        std::uniform_int_distribution<size_t> symbolsDist(0, symbols.size() - 1);
+        password += symbols[symbolsDist(rng)];
+        ++j;
+    }
+
+    for (int i = j; i < length; ++i) {
         password += allowedChars[charDist(rng)];
     }
+
+    std::shuffle(password.begin(), password.end(), rng);
 
     return password;
 }

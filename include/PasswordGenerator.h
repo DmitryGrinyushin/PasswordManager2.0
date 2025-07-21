@@ -6,7 +6,8 @@
 enum class PasswordType {
     digits,
     letters,
-    capitalLetters,
+    uppercaseLetters,
+    lowercaseLetters,
     symbols,
     digitsAndLetters,
     allChars
@@ -21,7 +22,7 @@ class PasswordGenerator {
     static const char* toString(PasswordType type);
 
 public:
-    PasswordGenerator (const std::string& chars, int minLen, int maxLen);
+    PasswordGenerator(const std::string& chars, int minLen, int maxLen);
     PasswordGenerator(PasswordType type, int minLen, int maxLen);
     
     std::string operator()();
