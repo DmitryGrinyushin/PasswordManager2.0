@@ -1,5 +1,7 @@
 #pragma once
 
+#include "DatabaseManager.h"
+#include "UserManager.h"
 #include <string>
 #include <vector>
 #include <sqlite3.h>
@@ -15,10 +17,11 @@ struct Account {
 };
 
 class AccountManager {
-    sqlite3* db;
+    DatabaseManager& dbManager;
+    UserManager& userManager;
 
 public:
-    AccountManager(sqlite3* database);
+    AccountManager(DatabaseManager& dbManager, UserManager& userManager);
 
     void addAccount(int userId,
                     const std::string& accountName,

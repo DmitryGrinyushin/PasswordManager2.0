@@ -34,7 +34,7 @@ int main() {
         if (userId == -1) throw std::runtime_error("Login failed");
 
         // AccountManager test
-        AccountManager accountManager(dbManager.getDb());
+        AccountManager accountManager(dbManager, userManager);
 
         std::string accName = "GitHub";
         std::string accLogin = "testuser@github.com";
@@ -86,7 +86,7 @@ int main() {
         // PasswordGenerator test
         PasswordGenerator gen1(PasswordType::digits, 8, 12);
         PasswordGenerator gen2(PasswordType::letters, 8, 12);
-        PasswordGenerator gen3(PasswordType::capitalLetters, 8, 12);
+        PasswordGenerator gen3(PasswordType::uppercaseLetters, 8, 12);
         PasswordGenerator gen4(PasswordType::symbols, 8, 12);
         PasswordGenerator gen5(PasswordType::digitsAndLetters, 8, 12);
         PasswordGenerator gen6(PasswordType::allChars, 8, 12);

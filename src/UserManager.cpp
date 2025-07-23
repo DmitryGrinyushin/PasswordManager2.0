@@ -47,7 +47,7 @@ bool UserManager::loginUser(const std::string& username, const std::string& pass
 
     sqlite3_bind_text(stmt.get(), 1, username.c_str(), -1, SQLITE_STATIC);
 
-    int rc = stmt.step(); // SELECT COUNT(*) always returns exactly one row
+    int rc = stmt.step();
 
     if (rc == SQLITE_DONE) {
         std::cout << "Access denied" << std::endl;
@@ -79,7 +79,8 @@ bool UserManager::loginUser(const std::string& username, const std::string& pass
         std::cout << "Successful login" << std::endl;
         Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" successfully logged in.");
         return true;
-    } else {
+    }
+    else {
         std::cout << "Access denied" << std::endl;
         Logger::getInstance().log(LogLevel::WARNING, "Access denied for user \"" + username + "\". Incorrect password.");
         return false;
@@ -127,4 +128,22 @@ void UserManager::deleteUser(const std::string& username) {
 
     std::cout << "Successful deletion" << std::endl;
     Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" successfully deleted.");
+}
+
+int UserManager::getUserId(const std::string& username) {
+    const char* sql = "SELECT id FROM users WHERE username = ?;";
+
+    StatementWrapper stmt(db, sql);
+
+    sqlite3_bind_text(stmt.get(), 1, username.c_str(), -1, SQLITE_STATIC);
+
+    int rc = stmt.step();
+    if (rc == SQLITE_ROW) {
+        return sqlite3_column_int(stmt.get(), 0);
+    }
+    else {
+        std::string errorMessage = "User \"" + username + "\" not found.";
+        Logger::getInstance().log(LogLevel::ERROR, errorMessage);
+        throw std::runtime_error(errorMessage);
+    }
 }

@@ -4,7 +4,8 @@
 #include <stdexcept>
 #include <iostream>
 
-AccountManager::AccountManager(sqlite3* database) : db(database) {}
+AccountManager::AccountManager(DatabaseManager& dbManager, UserManager& userManager)
+        : dbManager(dbManager), userManager(userManager) {}
 
 void AccountManager::addAccount(int userId,
     const std::string& accountName,
@@ -16,7 +17,7 @@ void AccountManager::addAccount(int userId,
         "INSERT INTO accounts (user_id, account_name, login, password_hash, notes) "
         "VALUES (?, ?, ?, ?, ?);";
 
-    StatementWrapper stmt(db, sql);
+    StatementWrapper stmt(dbManager.getDb(), sql);
 
     sqlite3_bind_int(stmt.get(), 1, userId);
     sqlite3_bind_text(stmt.get(), 2, accountName.c_str(), -1, SQLITE_STATIC);
@@ -26,12 +27,12 @@ void AccountManager::addAccount(int userId,
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {
-        std::string errorMessage = "Error inserting account: " + std::string(sqlite3_errmsg(db));
+        std::string errorMessage = "Error inserting account: " + std::string(sqlite3_errmsg(dbManager.getDb()));
         Logger::getInstance().log(LogLevel::ERROR, errorMessage);
         throw std::runtime_error(errorMessage);
     }
 
-    std::cout << "Account added successfully.\n";
+    std::cout << "Account added successfully.\n"; // to be removed before production
     Logger::getInstance().log(LogLevel::INFO, "Account \"" + accountName + "\" added for user ID " + std::to_string(userId));
 }
 
@@ -42,7 +43,7 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId) {
         "SELECT id, account_name, login, password_hash, notes, created_at, updated_at "
         "FROM accounts WHERE user_id = ? ORDER BY id;";
 
-    StatementWrapper stmt(db, sql);
+    StatementWrapper stmt(dbManager.getDb(), sql);
 
     sqlite3_bind_int(stmt.get(), 1, userId);
 
@@ -65,7 +66,7 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId) {
             break;
         }
         else {
-            std::string errorMessage = "Error selecting accounts: " + std::string(sqlite3_errmsg(db));
+            std::string errorMessage = "Error selecting accounts: " + std::string(sqlite3_errmsg(dbManager.getDb()));
             Logger::getInstance().log(LogLevel::ERROR, errorMessage);
             throw std::runtime_error(errorMessage);
         }
@@ -90,7 +91,7 @@ void AccountManager::updateAccount(int userId, int accountId,
         "updated_at = CURRENT_TIMESTAMP "
         "WHERE id = ? AND user_Id = ?;";
 
-    StatementWrapper stmt(db, sql);
+    StatementWrapper stmt(dbManager.getDb(), sql);
 
     sqlite3_bind_text(stmt.get(), 1, accountName.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 2, login.c_str(), -1, SQLITE_STATIC);
@@ -102,12 +103,12 @@ void AccountManager::updateAccount(int userId, int accountId,
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {
-        std::string errorMessage = "Error updating account: " + std::string(sqlite3_errmsg(db));
+        std::string errorMessage = "Error updating account: " + std::string(sqlite3_errmsg(dbManager.getDb()));
         Logger::getInstance().log(LogLevel::ERROR, errorMessage);
         throw std::runtime_error(errorMessage);
     }
 
-    int changes = sqlite3_changes(db);
+    int changes = sqlite3_changes(dbManager.getDb());
     if (changes == 0) {
         std::string warning = "Update failed: account with ID " + std::to_string(accountId) + " not found.";
         Logger::getInstance().log(LogLevel::WARNING, warning);
@@ -122,19 +123,19 @@ void AccountManager::deleteAccount(int userId, int accountId)
 {
     const char* sql = "DELETE FROM accounts WHERE id = ? AND user_id = ?;";
 
-    StatementWrapper stmt(db, sql);
+    StatementWrapper stmt(dbManager.getDb(), sql);
 
     sqlite3_bind_int(stmt.get(), 1, accountId); // ID connection
     sqlite3_bind_int(stmt.get(), 2, userId);
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {
-        std::string errorMessage = "Error deleting account: " + std::string(sqlite3_errmsg(db));
+        std::string errorMessage = "Error deleting account: " + std::string(sqlite3_errmsg(dbManager.getDb()));
         Logger::getInstance().log(LogLevel::ERROR, errorMessage);
         throw std::runtime_error(errorMessage);
     }
 
-    int changes = sqlite3_changes(db);
+    int changes = sqlite3_changes(dbManager.getDb());
     if (changes == 0) {
         std::string warning = "Delete failed: account with ID " + std::to_string(accountId) + " not found.";
         Logger::getInstance().log(LogLevel::WARNING, warning);

@@ -13,4 +13,6 @@ public:
     bool loginUser(const std::string& username, const std::string& password);
     bool userExists(const std::string& username);
     void deleteUser(const std::string& username);
+
+    int getUserId(const std::string& username);
 };

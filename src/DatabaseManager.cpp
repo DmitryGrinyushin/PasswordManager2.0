@@ -59,13 +59,6 @@ void DatabaseManager::createTables() {
         "password_hash TEXT NOT NULL,"
         "salt TEXT NOT NULL);";
 
-    const char* createPasswordsTable = 
-        "CREATE TABLE IF NOT EXISTS passwords ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "value TEXT NOT NULL,"
-        "type TEXT,"
-        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);";
-
     const char* createAccountsTable =
         "CREATE TABLE IF NOT EXISTS accounts ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -79,10 +72,9 @@ void DatabaseManager::createTables() {
         "FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE);";
 
     executeSQL(createUsersTable, "users");
-    executeSQL(createPasswordsTable, "passwords");
     executeSQL(createAccountsTable, "accounts");
 
-    std::cout << "Database created with tables 'users', 'passwords', 'accounts'." << std::endl;
+    std::cout << "Database created with tables 'users', 'accounts'." << std::endl;
     Logger::getInstance().log(LogLevel::INFO, "Database created");
 }
 
