@@ -67,6 +67,10 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                 continue;
             } else if (choice == 2) {
                 userId = userManager.loginUser(username, password);
+                if (userId == -1) {
+                    std::cout << "Login failed.\n";
+                    continue;
+                }
                 std::cout << "Login successful.\n";
             } else {
                 std::cout << "Invalid option.\n";

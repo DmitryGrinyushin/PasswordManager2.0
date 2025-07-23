@@ -40,8 +40,8 @@ int UserManager::registerUser(const std::string& username, const std::string& pa
     return userId;
 }
 
-bool UserManager::loginUser(const std::string& username, const std::string& password) {
-    const char* sql = "SELECT password_hash, salt FROM users WHERE username = ?;";
+int UserManager::loginUser(const std::string& username, const std::string& password) {
+    const char* sql = "SELECT id, password_hash, salt FROM users WHERE username = ?;";
 
     StatementWrapper stmt(db, sql);
 
@@ -52,7 +52,7 @@ bool UserManager::loginUser(const std::string& username, const std::string& pass
     if (rc == SQLITE_DONE) {
         std::cout << "Access denied" << std::endl;
         Logger::getInstance().log(LogLevel::WARNING, "Access denied for user \"" + username + "\". No such user.");
-        return false;
+        return -1;
     }
 
     if (rc != SQLITE_ROW) {
@@ -61,13 +61,14 @@ bool UserManager::loginUser(const std::string& username, const std::string& pass
         throw std::runtime_error(errorMessage);
     }
 
-    const unsigned char* storedHashText = sqlite3_column_text(stmt.get(), 0);
-    const unsigned char* storedSaltText = sqlite3_column_text(stmt.get(), 1);
+    int userId = sqlite3_column_int(stmt.get(), 0);
+    const unsigned char* storedHashText = sqlite3_column_text(stmt.get(), 1);
+    const unsigned char* storedSaltText = sqlite3_column_text(stmt.get(), 2);
 
     if (!storedHashText || !storedSaltText) {
         std::cout << "Access denied" << std::endl;
         Logger::getInstance().log(LogLevel::WARNING, "Access denied for user \"" + username + "\". Invalid stored credentials.");
-        return false;
+        return -1;
     }
 
     std::string storedHash(reinterpret_cast<const char*>(storedHashText));
@@ -78,12 +79,12 @@ bool UserManager::loginUser(const std::string& username, const std::string& pass
     if (hashedInput == storedHash) {
         std::cout << "Successful login" << std::endl;
         Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" successfully logged in.");
-        return true;
+        return userId;
     }
     else {
         std::cout << "Access denied" << std::endl;
         Logger::getInstance().log(LogLevel::WARNING, "Access denied for user \"" + username + "\". Incorrect password.");
-        return false;
+        return -1;
     }
 }
 
