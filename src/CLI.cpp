@@ -8,6 +8,20 @@ void clearInput() {
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
+int readIntSafe(const std::string& prompt) {
+    int value;
+    while (true) {
+        std::cout << prompt;
+        if (std::cin >> value) {
+            clearInput();
+            return value;
+        }
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "Invalid input. Please enter a number.\n";
+    }
+}
+
 int showMainMenu() {
     std::cout << "\n=== Password Manager ===\n";
     std::cout << "1. Register\n";
@@ -28,29 +42,14 @@ int showUserMenu() {
     return choice;
 }
 
-int readIntSafe(const std::string& prompt) {
-    int value;
-    while (true) {
-        std::cout << prompt;
-        if (std::cin >> value) {
-            clearInput();
-            return value;
-        }
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << "Invalid input. Please enter a number.\n";
-    }
-}
-
 // generate password
 std::string createPass() {
     std::cout << "1. Enter password manually\n";
     std::cout << "2. Generate password automatically\n";
-    std::cout << "Select option: ";
 
     int passChoice = readIntSafe("Select option: ");
 
-    std::string pass = "", type;
+    std::string pass;
     if (passChoice == 1) {
         std::cout << "Enter password: "; std::getline(std::cin, pass);
     }
@@ -95,8 +94,6 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
         std::string username, password;
         std::cout << "Username: ";
         std::getline(std::cin, username);
-        std::cout << "Password: ";
-        std::getline(std::cin, password);
 
         int userId = -1;
 
@@ -108,6 +105,9 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                 std::cout << "User registered. Please login.\n";
                 continue;
             } else if (choice == 2) {
+                std::cout << "Password: ";
+                std::getline(std::cin, password);
+
                 userId = userManager.loginUser(username, password);
                 if (userId == -1) {
                     std::cout << "Login failed.\n";
