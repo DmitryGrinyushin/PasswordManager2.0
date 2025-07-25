@@ -16,6 +16,10 @@ int UserManager::registerUser(const std::string& username, const std::string& pa
         throw std::runtime_error(errorMessage);
     }
 
+    if (username.empty() || password.empty()) {
+        throw std::invalid_argument("Username and password cannot be empty");
+    }
+
     std::string salt = PasswordHasher::generateSalt();
     std::string hashed = PasswordHasher::hashPassword(password, salt);
 
@@ -35,8 +39,8 @@ int UserManager::registerUser(const std::string& username, const std::string& pa
     }
 
     std::cout << "Successful registration" << std::endl;
-    Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" successfully registered.");
     int userId = static_cast<int>(sqlite3_last_insert_rowid(db));
+    Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" successfully registered with ID " + std::to_string(userId));
     return userId;
 }
 
@@ -78,7 +82,7 @@ int UserManager::loginUser(const std::string& username, const std::string& passw
 
     if (hashedInput == storedHash) {
         std::cout << "Successful login" << std::endl;
-        Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" successfully logged in.");
+        Logger::getInstance().log(LogLevel::INFO, "User \"" + username + "\" (ID: " + std::to_string(userId) + ") successfully logged in.");
         return userId;
     }
     else {

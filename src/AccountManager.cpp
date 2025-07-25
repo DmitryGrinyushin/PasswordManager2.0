@@ -32,8 +32,10 @@ void AccountManager::addAccount(int userId,
         throw std::runtime_error(errorMessage);
     }
 
+    int accountId = static_cast<int>(sqlite3_last_insert_rowid(dbManager.getDb()));
+
     std::cout << "Account added successfully.\n"; // to be removed before production
-    Logger::getInstance().log(LogLevel::INFO, "Account \"" + accountName + "\" added for user ID " + std::to_string(userId));
+    Logger::getInstance().log(LogLevel::INFO, "Account \"" + accountName + "\" with ID " + std::to_string(accountId) + " added for user ID " + std::to_string(userId));
 }
 
 std::vector<Account> AccountManager::getAccountsForUser(int userId) {
@@ -116,7 +118,7 @@ void AccountManager::updateAccount(int userId, int accountId,
     }
 
     std::cout << "Account updated successfully.\n";
-    Logger::getInstance().log(LogLevel::INFO, "Account ID " + std::to_string(accountId) + " updated.");
+    Logger::getInstance().log(LogLevel::INFO, "User ID " + std::to_string(userId) + " updated account ID " + std::to_string(accountId));
 }
 
 void AccountManager::deleteAccount(int userId, int accountId)
@@ -143,5 +145,5 @@ void AccountManager::deleteAccount(int userId, int accountId)
     }
 
     std::cout << "Account deleted successfully.\n";
-    Logger::getInstance().log(LogLevel::INFO, "Account ID " + std::to_string(accountId) + " deleted.");
+    Logger::getInstance().log(LogLevel::INFO, "User ID " + std::to_string(userId) + " deleted account ID " + std::to_string(accountId));
 }

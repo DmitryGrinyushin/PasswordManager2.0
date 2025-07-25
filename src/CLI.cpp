@@ -46,7 +46,6 @@ int showUserMenu() {
 std::string createPass() {
     std::cout << "1. Enter password manually\n";
     std::cout << "2. Generate password automatically\n";
-
     int passChoice = readIntSafe("Select option: ");
 
     std::string pass;
@@ -59,7 +58,6 @@ std::string createPass() {
         std::cout << "2. All characters (default option)\n";
         std::cout << "3. Letters only\n";
         std::cout << "4. Capital letters only\n";
-
         int typeChoice = readIntSafe("Select option: ");
 
         PasswordType type;
@@ -90,21 +88,26 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
         int choice = showMainMenu();
 
         if (choice == 0) break;
-
-        std::string username, password;
-        std::cout << "Username: ";
-        std::getline(std::cin, username);
-
         int userId = -1;
-
         try {
             if (choice == 1) {
-                // insert createPass here
+                std::string username, password;
+                std::cout << "Username: ";
+                std::getline(std::cin, username);
                 password = createPass();
+
+                if (username.empty() || password.empty()) {
+                    std::cout << "Username and password must not be empty.\n";
+                    continue;
+                }
+
                 userId = userManager.registerUser(username, password);
                 std::cout << "User registered. Please login.\n";
                 continue;
             } else if (choice == 2) {
+                std::string username, password;
+                std::cout << "Username: ";
+                std::getline(std::cin, username);
                 std::cout << "Password: ";
                 std::getline(std::cin, password);
 
@@ -127,13 +130,11 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
             int subChoice = showUserMenu();
 
             if (subChoice == 0) break;
-
             try {
                 if (subChoice == 1) {
                     std::string name, login, pass, notes;
                     std::cout << "Account name: "; std::getline(std::cin, name);
                     std::cout << "Login: "; std::getline(std::cin, login);
-                    // insert createPass here
                     pass = createPass();
                     std::cout << "Notes: "; std::getline(std::cin, notes);
                     std::string hashed = PasswordHasher::hashPassword(pass, "somesalt");
@@ -150,7 +151,6 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                     std::cout << "Account ID to update: "; std::cin >> id; clearInput();
                     std::cout << "New name: "; std::getline(std::cin, name);
                     std::cout << "New login: "; std::getline(std::cin, login);
-                    // insert createPass here
                     pass = createPass();
                     std::cout << "New notes: "; std::getline(std::cin, notes);
                     std::string hashed = PasswordHasher::hashPassword(pass, "somesalt");
