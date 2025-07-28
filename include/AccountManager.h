@@ -11,6 +11,7 @@ struct Account {
     std::string accountName;
     std::string login;
     std::string passwordHash;
+    std::string url;
     std::string notes;
     std::string createdAt;
     std::string updatedAt;
@@ -27,6 +28,7 @@ public:
                     const std::string& accountName,
                     const std::string& login,
                     const std::string& passwordHash,
+                    const std::string& url,
                     const std::string& notes);
 
     std::vector<Account> getAccountsForUser(int userId);
@@ -36,6 +38,7 @@ public:
                         const std::string& accountName,
                         const std::string& login,
                         const std::string& passwordHash,
+                        const std::string& url,
                         const std::string& notes);
 
     void deleteAccount(int userId, int accountId);

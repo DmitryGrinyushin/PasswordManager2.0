@@ -11,11 +11,12 @@ void AccountManager::addAccount(int userId,
     const std::string& accountName,
     const std::string& login,
     const std::string& passwordHash,
+    const std::string& url,
     const std::string& notes) {
 
     const char* sql = 
-        "INSERT INTO accounts (user_id, account_name, login, password_hash, notes) "
-        "VALUES (?, ?, ?, ?, ?);";
+        "INSERT INTO accounts (user_id, account_name, login, password_hash, url, notes) "
+        "VALUES (?, ?, ?, ?, ?, ?);";
 
     StatementWrapper stmt(dbManager.getDb(), sql);
 
@@ -23,7 +24,8 @@ void AccountManager::addAccount(int userId,
     sqlite3_bind_text(stmt.get(), 2, accountName.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 3, login.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 4, passwordHash.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt.get(), 5, notes.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt.get(), 5, url.c_str(), -1, SQLITE_STATIC);   
+    sqlite3_bind_text(stmt.get(), 6, notes.c_str(), -1, SQLITE_STATIC);
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {
@@ -42,7 +44,7 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId) {
     std::vector<Account> accounts;
 
     const char* sql =
-        "SELECT id, account_name, login, password_hash, notes, created_at, updated_at "
+        "SELECT id, account_name, login, password_hash, url, notes, created_at, updated_at "
         "FROM accounts WHERE user_id = ? ORDER BY id;";
 
     StatementWrapper stmt(dbManager.getDb(), sql);
@@ -58,9 +60,10 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId) {
             account.accountName = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 1));
             account.login = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
             account.passwordHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
-            account.notes = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 4));
-            account.createdAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 5));
-            account.updatedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 6));
+            account.url = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 4));
+            account.notes = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 5));
+            account.createdAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 6));
+            account.updatedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 7));
 
             accounts.push_back(account);
         }
@@ -82,6 +85,7 @@ void AccountManager::updateAccount(int userId, int accountId,
     const std::string& accountName,
     const std::string& login,
     const std::string& passwordHash,
+    const std::string& url,
     const std::string& notes) {
 
     const char* sql =
@@ -89,19 +93,20 @@ void AccountManager::updateAccount(int userId, int accountId,
         "account_name = ?, "
         "login = ?, "
         "password_hash = ?, "
+        "url = ?, "
         "notes = ?, "
         "updated_at = CURRENT_TIMESTAMP "
-        "WHERE id = ? AND user_Id = ?;";
+        "WHERE id = ? AND user_id = ?;";
 
     StatementWrapper stmt(dbManager.getDb(), sql);
 
     sqlite3_bind_text(stmt.get(), 1, accountName.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 2, login.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 3, passwordHash.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt.get(), 4, notes.c_str(), -1, SQLITE_STATIC);
-
-    sqlite3_bind_int(stmt.get(), 5, accountId); // Identification (WHERE id)
-    sqlite3_bind_int(stmt.get(), 6, userId);
+    sqlite3_bind_text(stmt.get(), 4, url.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt.get(), 5, notes.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt.get(), 6, accountId); // Identification (WHERE id)
+    sqlite3_bind_int(stmt.get(), 7, userId);
 
     int rc = stmt.step();
     if (rc != SQLITE_DONE) {

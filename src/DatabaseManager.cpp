@@ -66,6 +66,7 @@ void DatabaseManager::createTables() {
         "account_name TEXT NOT NULL,"
         "login TEXT,"
         "password_hash TEXT,"
+        "url TEXT,"
         "notes TEXT,"
         "created_at TEXT DEFAULT CURRENT_TIMESTAMP,"
         "updated_at TEXT DEFAULT CURRENT_TIMESTAMP,"

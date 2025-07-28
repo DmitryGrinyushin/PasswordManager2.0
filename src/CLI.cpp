@@ -132,29 +132,31 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
             if (subChoice == 0) break;
             try {
                 if (subChoice == 1) {
-                    std::string name, login, pass, notes;
+                    std::string name, login, pass, url, notes;
                     std::cout << "Account name: "; std::getline(std::cin, name);
                     std::cout << "Login: "; std::getline(std::cin, login);
+                    std::cout << "URL: "; std::getline(std::cin, url);
                     pass = createPass();
                     std::cout << "Notes: "; std::getline(std::cin, notes);
                     std::string hashed = PasswordHasher::hashPassword(pass, "somesalt");
-                    accountManager.addAccount(userId, name, login, hashed, notes);
+                    accountManager.addAccount(userId, name, login, hashed, url, notes);
                 } else if (subChoice == 2) {
                     auto accounts = accountManager.getAccountsForUser(userId);
                     for (const auto& acc : accounts) {
                         std::cout << "[" << acc.id << "] " << acc.accountName << " | "
-                                  << acc.login << " | " << acc.notes << "\n";
+                                  << acc.login << " | "<< acc.url << " | " << acc.notes << "\n";
                     }
                 } else if (subChoice == 3) {
                     int id;
-                    std::string name, login, pass, notes;
+                    std::string name, login, pass, url, notes;
                     std::cout << "Account ID to update: "; std::cin >> id; clearInput();
                     std::cout << "New name: "; std::getline(std::cin, name);
                     std::cout << "New login: "; std::getline(std::cin, login);
+                    std::cout << "New URL: "; std::getline(std::cin, url);
                     pass = createPass();
                     std::cout << "New notes: "; std::getline(std::cin, notes);
                     std::string hashed = PasswordHasher::hashPassword(pass, "somesalt");
-                    accountManager.updateAccount(userId, id, name, login, hashed, notes);
+                    accountManager.updateAccount(userId, id, name, login, hashed, url, notes);
                 } else if (subChoice == 4) {
                     int id = readIntSafe("Account ID to delete: ");
                     accountManager.deleteAccount(userId, id);
