@@ -152,3 +152,46 @@ int UserManager::getUserId(const std::string& username) {
         throw std::runtime_error(errorMessage);
     }
 }
+
+std::string UserManager::getSaltByUsername(const std::string& username) {
+    const char* sql = "SELECT salt FROM users WHERE username = ?;";
+    StatementWrapper stmt(db, sql);
+
+    sqlite3_bind_text(stmt.get(), 1, username.c_str(), -1, SQLITE_STATIC);
+
+    int rc = stmt.step();
+    if (rc == SQLITE_ROW) {
+        const unsigned char* saltText = sqlite3_column_text(stmt.get(), 0);
+        return std::string(reinterpret_cast<const char*>(saltText));
+    } else {
+        throw std::runtime_error("User not found when retrieving salt");
+    }
+}
+
+std::pair<int, std::vector<unsigned char>> UserManager::loginAndDeriveKey(
+    const std::string& username,
+    const std::string& password)
+{
+    const char* sql = "SELECT id, password_hash, salt FROM users WHERE username = ?;";
+    StatementWrapper stmt(db, sql);
+
+    sqlite3_bind_text(stmt.get(), 1, username.c_str(), -1, SQLITE_STATIC);
+
+    int rc = stmt.step();
+    if (rc == SQLITE_ROW) {
+        int userId = sqlite3_column_int(stmt.get(), 0);
+        std::string storedHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 1));
+        std::string salt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
+
+        std::string inputHash = PasswordHasher::hashPassword(password, salt);
+
+        if (inputHash == storedHash) {
+            auto key = PasswordHasher::deriveKey(password, salt);
+            return {userId, key};
+        } else {
+            return {-1, {}}; // Invalid password
+        }
+    } else {
+        return {-1, {}}; // User not found
+    }
+}

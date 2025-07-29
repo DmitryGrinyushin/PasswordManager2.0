@@ -1,6 +1,7 @@
 #include "AccountManager.h"
 #include "Logger.h"
 #include "StatementWrapper.h"
+#include "EncryptionManager.h"
 #include <stdexcept>
 #include <iostream>
 
@@ -8,14 +9,17 @@ AccountManager::AccountManager(DatabaseManager& dbManager, UserManager& userMana
         : dbManager(dbManager), userManager(userManager) {}
 
 void AccountManager::addAccount(int userId,
-    const std::string& accountName,
-    const std::string& login,
-    const std::string& passwordHash,
-    const std::string& url,
-    const std::string& notes) {
+                        const std::string& accountName,
+                        const std::string& login,
+                        const std::string& plainPassword,
+                        const std::string& url,
+                        const std::string& notes,
+                        const std::vector<unsigned char>& key) {
 
+    std::string encryptedPassword = EncryptionManager::encryptField(plainPassword, key);
+    std::cout << "[ENCRYPTED] " << encryptedPassword << "\n"; // test
     const char* sql = 
-        "INSERT INTO accounts (user_id, account_name, login, password_hash, url, notes) "
+        "INSERT INTO accounts (user_id, account_name, login, password_encrypted, url, notes) "
         "VALUES (?, ?, ?, ?, ?, ?);";
 
     StatementWrapper stmt(dbManager.getDb(), sql);
@@ -23,7 +27,7 @@ void AccountManager::addAccount(int userId,
     sqlite3_bind_int(stmt.get(), 1, userId);
     sqlite3_bind_text(stmt.get(), 2, accountName.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 3, login.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt.get(), 4, passwordHash.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt.get(), 4, encryptedPassword.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 5, url.c_str(), -1, SQLITE_STATIC);   
     sqlite3_bind_text(stmt.get(), 6, notes.c_str(), -1, SQLITE_STATIC);
 
@@ -40,11 +44,11 @@ void AccountManager::addAccount(int userId,
     Logger::getInstance().log(LogLevel::INFO, "Account \"" + accountName + "\" with ID " + std::to_string(accountId) + " added for user ID " + std::to_string(userId));
 }
 
-std::vector<Account> AccountManager::getAccountsForUser(int userId) {
+std::vector<Account> AccountManager::getAccountsForUser(int userId, const std::vector<unsigned char>& key) {
     std::vector<Account> accounts;
 
     const char* sql =
-        "SELECT id, account_name, login, password_hash, url, notes, created_at, updated_at "
+        "SELECT id, account_name, login, password_encrypted, url, notes, created_at, updated_at "
         "FROM accounts WHERE user_id = ? ORDER BY id;";
 
     StatementWrapper stmt(dbManager.getDb(), sql);
@@ -59,11 +63,20 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId) {
             account.id = sqlite3_column_int(stmt.get(), 0);
             account.accountName = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 1));
             account.login = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
-            account.passwordHash = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
+            std::string encryptedPassword = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
             account.url = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 4));
             account.notes = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 5));
             account.createdAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 6));
             account.updatedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 7));
+
+            try {
+                std::cout << "[TO DECRYPT] " << encryptedPassword << "\n"; // test
+                account.encryptedPassword = EncryptionManager::decryptField(encryptedPassword, key);
+                
+            } catch (const std::exception& e) {
+                Logger::getInstance().log(LogLevel::ERROR, "Decryption failed for account ID " + std::to_string(account.id) + ": " + e.what());
+                account.encryptedPassword = "<decryption error>";
+            }
 
             accounts.push_back(account);
         }
@@ -81,18 +94,22 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId) {
     return accounts;
 }
 
-void AccountManager::updateAccount(int userId, int accountId,
-    const std::string& accountName,
-    const std::string& login,
-    const std::string& passwordHash,
-    const std::string& url,
-    const std::string& notes) {
+void AccountManager::updateAccount(int userId,
+                        int accountId,
+                        const std::string& accountName,
+                        const std::string& login,
+                        const std::string& plainPassword,
+                        const std::string& url,
+                        const std::string& notes,
+                        const std::vector<unsigned char>& key) {
+
+    std::string encryptedPassword = EncryptionManager::encryptField(plainPassword, key);
 
     const char* sql =
         "UPDATE accounts SET "
         "account_name = ?, "
         "login = ?, "
-        "password_hash = ?, "
+        "password_encrypted = ?, "
         "url = ?, "
         "notes = ?, "
         "updated_at = CURRENT_TIMESTAMP "
@@ -102,7 +119,7 @@ void AccountManager::updateAccount(int userId, int accountId,
 
     sqlite3_bind_text(stmt.get(), 1, accountName.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 2, login.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt.get(), 3, passwordHash.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt.get(), 3, encryptedPassword.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 4, url.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt.get(), 5, notes.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt.get(), 6, accountId); // Identification (WHERE id)

@@ -15,4 +15,9 @@ public:
     void deleteUser(const std::string& username);
 
     int getUserId(const std::string& username);
+    std::string getSaltByUsername(const std::string& username);
+
+    std::pair<int, std::vector<unsigned char>> loginAndDeriveKey(
+    const std::string& username,
+    const std::string& password);
 };

@@ -1,6 +1,7 @@
 #include "CLI.h"
 #include "PasswordHasher.h"
 #include "PasswordGenerator.h"
+#include "EncryptionManager.h"
 #include <iostream>
 #include <limits>
 
@@ -89,6 +90,8 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
 
         if (choice == 0) break;
         int userId = -1;
+        std::vector<unsigned char> key;
+
         try {
             if (choice == 1) {
                 std::string username, password;
@@ -111,7 +114,7 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                 std::cout << "Password: ";
                 std::getline(std::cin, password);
 
-                userId = userManager.loginUser(username, password);
+                std::tie(userId, key) = userManager.loginAndDeriveKey(username, password);
                 if (userId == -1) {
                     std::cout << "Login failed.\n";
                     continue;
@@ -130,6 +133,7 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
             int subChoice = showUserMenu();
 
             if (subChoice == 0) break;
+
             try {
                 if (subChoice == 1) {
                     std::string name, login, pass, url, notes;
@@ -138,15 +142,25 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                     std::cout << "URL: "; std::getline(std::cin, url);
                     pass = createPass();
                     std::cout << "Notes: "; std::getline(std::cin, notes);
-                    std::string hashed = PasswordHasher::hashPassword(pass, "somesalt");
-                    accountManager.addAccount(userId, name, login, hashed, url, notes);
-                } else if (subChoice == 2) {
-                    auto accounts = accountManager.getAccountsForUser(userId);
+
+                    accountManager.addAccount(userId, name, login, pass, url, notes, key);
+                } 
+                else if (subChoice == 2) {
+                    auto accounts = accountManager.getAccountsForUser(userId, key);
                     for (const auto& acc : accounts) {
-                        std::cout << "[" << acc.id << "] " << acc.accountName << " | "
-                                  << acc.login << " | "<< acc.url << " | " << acc.notes << "\n";
+                        std::string decryptedPassword;
+                        
+                        decryptedPassword = acc.encryptedPassword;
+
+                        std::cout << "[" << acc.id << "] "
+                                  << acc.accountName << " | "
+                                  << acc.login << " | "
+                                  << acc.url << " | "
+                                  << "Password: " << decryptedPassword << " | "
+                                  << "Notes: " << acc.notes << "\n";
                     }
-                } else if (subChoice == 3) {
+                } 
+                else if (subChoice == 3) {
                     int id;
                     std::string name, login, pass, url, notes;
                     std::cout << "Account ID to update: "; std::cin >> id; clearInput();
@@ -155,12 +169,14 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                     std::cout << "New URL: "; std::getline(std::cin, url);
                     pass = createPass();
                     std::cout << "New notes: "; std::getline(std::cin, notes);
-                    std::string hashed = PasswordHasher::hashPassword(pass, "somesalt");
-                    accountManager.updateAccount(userId, id, name, login, hashed, url, notes);
-                } else if (subChoice == 4) {
+
+                    accountManager.updateAccount(userId, id, name, login, pass, url, notes, key);
+                } 
+                else if (subChoice == 4) {
                     int id = readIntSafe("Account ID to delete: ");
                     accountManager.deleteAccount(userId, id);
-                } else {
+                } 
+                else {
                     std::cout << "Invalid option.\n";
                 }
             } catch (const std::exception& e) {

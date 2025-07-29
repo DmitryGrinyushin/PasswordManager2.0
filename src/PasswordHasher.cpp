@@ -3,6 +3,8 @@
 #include <openssl/rand.h>
 #include <sstream>
 #include <iomanip>
+#include <openssl/evp.h>
+#include <openssl/sha.h>
 
 namespace PasswordHasher {
 
@@ -36,6 +38,25 @@ std::string hashPassword(const std::string& password, const std::string& salt, i
         oss << std::hex << std::setw(2) << std::setfill('0') << (int)c;
     }
     return oss.str();
+}
+
+std::vector<unsigned char> deriveKey(const std::string& password, const std::string& salt, int keyLength) {
+    std::vector<unsigned char> key(keyLength);
+
+    if (PKCS5_PBKDF2_HMAC(
+            password.c_str(),
+            static_cast<int>(password.size()),
+            reinterpret_cast<const unsigned char*>(salt.data()),
+            static_cast<int>(salt.size()),
+            100000, // iterations
+            EVP_sha256(),
+            keyLength,
+            key.data()) != 1)
+    {
+        throw std::runtime_error("Failed to derive key using PBKDF2");
+    }
+
+    return key;
 }
 
 }

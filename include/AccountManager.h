@@ -10,7 +10,7 @@ struct Account {
     int id;
     std::string accountName;
     std::string login;
-    std::string passwordHash;
+    std::string encryptedPassword;
     std::string url;
     std::string notes;
     std::string createdAt;
@@ -25,21 +25,23 @@ public:
     AccountManager(DatabaseManager& dbManager, UserManager& userManager);
 
     void addAccount(int userId,
-                    const std::string& accountName,
-                    const std::string& login,
-                    const std::string& passwordHash,
-                    const std::string& url,
-                    const std::string& notes);
+                        const std::string& accountName,
+                        const std::string& login,
+                        const std::string& plainPassword,
+                        const std::string& url,
+                        const std::string& notes,
+                        const std::vector<unsigned char>& key);
 
-    std::vector<Account> getAccountsForUser(int userId);
+    std::vector<Account> getAccountsForUser(int userId, const std::vector<unsigned char>& key);
 
     void updateAccount(int userId,
                         int accountId,
                         const std::string& accountName,
                         const std::string& login,
-                        const std::string& passwordHash,
+                        const std::string& plainPassword,
                         const std::string& url,
-                        const std::string& notes);
+                        const std::string& notes,
+                        const std::vector<unsigned char>& key);
 
     void deleteAccount(int userId, int accountId);
 };

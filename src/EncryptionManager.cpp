@@ -5,6 +5,43 @@
 #include <openssl/buffer.h>
 #include <stdexcept>
 #include <cstring>
+#include <iostream> // for debug output
+
+// Helper: base64 encode
+std::string base64Encode(const std::vector<unsigned char>& data) {
+    BIO* bio = BIO_new(BIO_s_mem());
+    BIO* b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // no newlines
+    bio = BIO_push(b64, bio);
+
+    BIO_write(bio, data.data(), static_cast<int>(data.size()));
+    BIO_flush(bio);
+
+    BUF_MEM* bufferPtr;
+    BIO_get_mem_ptr(bio, &bufferPtr);
+    std::string result(bufferPtr->data, bufferPtr->length);
+
+    BIO_free_all(bio);
+    return result;
+}
+
+// Helper: base64 decode
+std::vector<unsigned char> base64Decode(const std::string& input) {
+    BIO* bio = BIO_new_mem_buf(input.data(), static_cast<int>(input.size()));
+    BIO* b64 = BIO_new(BIO_f_base64());
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+    bio = BIO_push(b64, bio);
+
+    std::vector<unsigned char> buffer(input.size());
+    int length = BIO_read(bio, buffer.data(), static_cast<int>(input.size()));
+    BIO_free_all(bio);
+
+    if (length <= 0)
+        throw std::runtime_error("base64Decode failed: invalid input or read error");
+
+    buffer.resize(length);
+    return buffer;
+}
 
 std::vector<unsigned char> EncryptionManager::generateRandomBytes(size_t length) {
     std::vector<unsigned char> buffer(length);
@@ -46,13 +83,18 @@ std::vector<unsigned char> EncryptionManager::encrypt(
         throw std::runtime_error("Encryption failed during finalization");
 
     ciphertext_len += len;
-    ciphertext.resize(ciphertext_len); // Trim if needed
+    ciphertext.resize(ciphertext_len); // Trim to actual length
 
-    outTag.resize(16); // 128-bit GCM tag
+    outTag.resize(16); // 128-bit tag
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, outTag.data()) != 1)
         throw std::runtime_error("Failed to retrieve GCM tag");
 
     EVP_CIPHER_CTX_free(ctx);
+
+    std::cout << "[ENCRYPT DEBUG] iv=" << base64Encode(outIV)
+              << " ciphertext=" << base64Encode(ciphertext)
+              << " tag=" << base64Encode(outTag) << "\n";
+
     return ciphertext;
 }
 
@@ -72,7 +114,7 @@ std::string EncryptionManager::decrypt(
         throw std::runtime_error("Failed to set decryption key and IV");
 
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, const_cast<unsigned char*>(tag.data())) != 1)
-        throw std::runtime_error("Failed to set GCM tag for verification");
+        throw std::runtime_error("Failed to set GCM tag");
 
     std::vector<unsigned char> plaintext(ciphertext.size());
     int len = 0;
@@ -82,7 +124,6 @@ std::string EncryptionManager::decrypt(
 
     int plaintext_len = len;
 
-    // This will return 0 if tag is invalid (data was tampered)
     if (EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len) != 1)
         throw std::runtime_error("Decryption failed: authentication check failed");
 
@@ -91,37 +132,6 @@ std::string EncryptionManager::decrypt(
 
     EVP_CIPHER_CTX_free(ctx);
     return std::string(plaintext.begin(), plaintext.end());
-}
-
-std::string base64Encode(const std::vector<unsigned char>& data) {
-    BIO* bio = BIO_new(BIO_s_mem());
-    BIO* b64 = BIO_new(BIO_f_base64());
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // no newlines
-    bio = BIO_push(b64, bio);
-
-    BIO_write(bio, data.data(), static_cast<int>(data.size()));
-    BIO_flush(bio);
-
-    BUF_MEM* bufferPtr;
-    BIO_get_mem_ptr(bio, &bufferPtr);
-    std::string result(bufferPtr->data, bufferPtr->length);
-
-    BIO_free_all(bio);
-    return result;
-}
-
-std::vector<unsigned char> base64Decode(const std::string& input) {
-    BIO* bio = BIO_new_mem_buf(input.data(), static_cast<int>(input.size()));
-    BIO* b64 = BIO_new(BIO_f_base64());
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-    bio = BIO_push(b64, bio);
-
-    std::vector<unsigned char> buffer(input.size());
-    int length = BIO_read(bio, buffer.data(), static_cast<int>(input.size()));
-    buffer.resize(length);
-
-    BIO_free_all(bio);
-    return buffer;
 }
 
 std::string EncryptionManager::encryptField(const std::string& plaintext, const std::vector<unsigned char>& key) {
