@@ -27,6 +27,7 @@ int showMainMenu() {
     std::cout << "\n=== Password Manager ===\n";
     std::cout << "1. Register\n";
     std::cout << "2. Login\n";
+    std::cout << "3. Delete\n";
     std::cout << "0. Exit\n";
     int choice = readIntSafe("Select option: ");
     return choice;
@@ -88,12 +89,12 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
     while (true) {
         int choice = showMainMenu();
 
-        if (choice == 0) break;
+        if (choice == 0) break; // to exit
         int userId = -1;
         std::vector<unsigned char> key;
 
         try {
-            if (choice == 1) {
+            if (choice == 1) { // to register
                 std::string username, password;
                 std::cout << "Username: ";
                 std::getline(std::cin, username);
@@ -107,7 +108,8 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                 userId = userManager.registerUser(username, password);
                 std::cout << "User registered. Please login.\n";
                 continue;
-            } else if (choice == 2) {
+
+            } else if (choice == 2) { // to update
                 std::string username, password;
                 std::cout << "Username: ";
                 std::getline(std::cin, username);
@@ -120,6 +122,40 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                     continue;
                 }
                 std::cout << "Login successful.\n";
+
+            } else if (choice == 3) { // to delete
+                std::string username, password;
+                std::cout << "Username: ";
+                std::getline(std::cin, username);
+                std::cout << "Password: ";
+                std::getline(std::cin, password);
+
+                std::tie(userId, key) = userManager.loginAndDeriveKey(username, password);
+                if (userId == -1) {
+                    std::cout << "Login failed.\n";
+                    continue;
+                }
+
+                std::string delete_confirmation;
+                std::cout <<"You're going to delete user \"" + username + "\". Pleace confirm (Y/n): ";
+                std::getline(std::cin, delete_confirmation);
+                if (delete_confirmation == "n") {
+                    std::cout << "Deletion cancelled.\n";
+                    continue;
+                } else if (delete_confirmation == "Y") {
+                    userManager.deleteUser(username);
+
+                    auto accounts = accountManager.getAccountsForUser(userId, key);
+                    for (const auto& acc : accounts) {
+                        accountManager.deleteAccount(userId, acc.id);
+                    }
+                    std::cout << "User and all associated accounts deleted.\n";
+                    continue;
+                } else {
+                    std::cout << "Invalid confirmation.\n";
+                    continue;
+                }
+
             } else {
                 std::cout << "Invalid option.\n";
                 continue;
@@ -175,7 +211,7 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                 else if (subChoice == 4) {
                     int id = readIntSafe("Account ID to delete: ");
                     accountManager.deleteAccount(userId, id);
-                } 
+                }
                 else {
                     std::cout << "Invalid option.\n";
                 }
