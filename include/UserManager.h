@@ -9,6 +9,12 @@ class UserManager {
 public:
     UserManager(sqlite3* database);
 
+    UserManager(const UserManager&) = delete;
+    UserManager& operator=(const UserManager&) = delete;
+    
+    UserManager(UserManager&&) = delete;
+    UserManager& operator=(UserManager&&) = delete;
+
     int registerUser(const std::string& username, const std::string& password);
     int loginUser(const std::string& username, const std::string& password);
     bool userExists(const std::string& username);

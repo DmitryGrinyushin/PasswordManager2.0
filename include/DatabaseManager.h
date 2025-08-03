@@ -12,6 +12,13 @@ class DatabaseManager {
 
 public:
     DatabaseManager(const std::string& path);
+    
+    DatabaseManager(const DatabaseManager&) = delete;
+    DatabaseManager& operator=(const DatabaseManager&) = delete;
+
+    DatabaseManager(DatabaseManager&&) = delete;
+    DatabaseManager& operator=(DatabaseManager&&) = delete;
+
     void initialize();
 
     sqlite3* getDb();

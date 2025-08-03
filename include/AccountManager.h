@@ -24,6 +24,12 @@ class AccountManager {
 public:
     AccountManager(DatabaseManager& dbManager, UserManager& userManager);
 
+    AccountManager(const AccountManager&) = delete;
+    AccountManager& operator=(const AccountManager&) = delete;
+    
+    AccountManager(AccountManager&&) = delete;
+    AccountManager& operator=(AccountManager&&) = delete;
+
     void addAccount(int userId,
                         const std::string& accountName,
                         const std::string& login,

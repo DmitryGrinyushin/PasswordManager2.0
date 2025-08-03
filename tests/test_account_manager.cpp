@@ -213,3 +213,14 @@ TEST_CASE("AccountManager basic operations", "[account]") {
         REQUIRE(accounts.empty());
     }
 }
+
+/*TEST_CASE("EncryptionManager encrypt/decrypt", "[encryption]") {
+    std::string testDbPath = ":memory:";
+    DatabaseManager dbManager(testDbPath);
+    dbManager.initialize();
+
+    UserManager userManager(dbManager.getDb());
+    int userId = userManager.registerUser("testuser", "testpass");
+
+    AccountManager accountManager(dbManager, userManager);
+}*/
