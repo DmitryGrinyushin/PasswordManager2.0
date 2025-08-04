@@ -214,13 +214,33 @@ TEST_CASE("AccountManager basic operations", "[account]") {
     }
 }
 
-/*TEST_CASE("EncryptionManager encrypt/decrypt", "[encryption]") {
-    std::string testDbPath = ":memory:";
-    DatabaseManager dbManager(testDbPath);
-    dbManager.initialize();
+TEST_CASE("EncryptionManager encrypt/decrypt", "[encryption]") {
+    const std::string originalText = "Text to be encrypted";
+    const std::vector<unsigned char> key = EncryptionManager::generateRandomBytes(32);
 
-    UserManager userManager(dbManager.getDb());
-    int userId = userManager.registerUser("testuser", "testpass");
+    SECTION("Encrypt then decrypt should return original text") {
+        std::string encrypted = EncryptionManager::encryptField(originalText, key);
+        REQUIRE_FALSE(encrypted.empty());
+        REQUIRE(encrypted != originalText);
 
-    AccountManager accountManager(dbManager, userManager);
-}*/
+        std::string decrypted = EncryptionManager::decryptField(encrypted, key);
+        REQUIRE(decrypted == originalText);
+    }
+
+    SECTION("Decryption with wrong key should fail") {
+        std::string encrypted = EncryptionManager::encryptField(originalText, key);
+        REQUIRE_FALSE(encrypted.empty());
+
+        std::vector<unsigned char> wrongKey = EncryptionManager::generateRandomBytes(32);
+        REQUIRE_THROWS_AS(EncryptionManager::decryptField(encrypted, wrongKey), std::runtime_error);
+    }
+
+    SECTION("Decryption with corrupted data should fail") {
+        std::string encrypted = EncryptionManager::encryptField(originalText, key);
+        REQUIRE_FALSE(encrypted.empty());
+
+        encrypted[5] ^= 0xFF; // 5th byte is damaged
+
+        REQUIRE_THROWS_AS(EncryptionManager::decryptField(encrypted, key), std::runtime_error);
+    }
+}
