@@ -4,6 +4,7 @@
 #include "AccountManager.h"
 #include "DatabaseManager.h"
 #include "Logger.h"
+#include "PasswordHasher.h"
 #include "EncryptionManager.h"
 
 TEST_CASE("AccountManager basic operations", "[account]") {
