@@ -18,8 +18,8 @@ TEST_CASE("Database creating in memory", "[db][memory]") {
         sqlite3_finalize(stmt);
     }
 
-    SECTION("Passwords table exists") {
-        const char* sql = "SELECT name FROM sqlite_master WHERE type='table' AND name='passwords';";
+    SECTION("Accounts table exists") {
+        const char* sql = "SELECT name FROM sqlite_master WHERE type='table' AND name='accounts';";
         sqlite3_stmt* stmt;
         REQUIRE(sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK);
         REQUIRE(sqlite3_step(stmt) == SQLITE_ROW);

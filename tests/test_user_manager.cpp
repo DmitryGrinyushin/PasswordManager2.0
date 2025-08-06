@@ -21,8 +21,8 @@ TEST_CASE("UserManager basic operations", "[user]") {
     SECTION("User login") {
         userManager.registerUser("testuser", "pass123");
         REQUIRE(userManager.userExists("testuser") == true);
-        REQUIRE(userManager.loginUser("testuser", "pass123") == true);
-        REQUIRE(userManager.loginUser("testuser", "wrongpass") == false);
+        REQUIRE(userManager.loginUser("testuser", "pass123") != -1);
+        REQUIRE(userManager.loginUser("testuser", "wrongpass") == -1);
     }
 
     SECTION("User deletion") {
@@ -44,24 +44,24 @@ TEST_CASE("UserManager basic operations", "[user]") {
 
     SECTION("Login of non-existent user fails") {
         REQUIRE(userManager.userExists("ghostuser") == false);
-        REQUIRE(userManager.loginUser("ghostuser", "whatever") == false);
+        REQUIRE(userManager.loginUser("ghostuser", "whatever") == -1);
     }
 
     SECTION("Deleted user disappearance") {
         userManager.registerUser("testuser", "pass123");
         userManager.deleteUser("testuser");
         REQUIRE(userManager.userExists("testuser") == false);
-        REQUIRE(userManager.loginUser("testuser", "wrongpass") == false);
+        REQUIRE(userManager.loginUser("testuser", "wrongpass") == -1);
     }
 
     SECTION("Multiple user login") {
         userManager.registerUser("testuser1", "pass123");
         REQUIRE(userManager.userExists("testuser1") == true);
-        REQUIRE(userManager.loginUser("testuser1", "pass123") == true);
+        REQUIRE(userManager.loginUser("testuser1", "pass123") != -1);
         userManager.registerUser("testuser2", "pass456");
         REQUIRE(userManager.userExists("testuser2") == true);
-        REQUIRE(userManager.loginUser("testuser2", "pass456") == true);
-        REQUIRE(userManager.loginUser("testuser1", "pass456") == false);
-        REQUIRE(userManager.loginUser("testuser2", "pass123") == false);
+        REQUIRE(userManager.loginUser("testuser2", "pass456") != -1);
+        REQUIRE(userManager.loginUser("testuser1", "pass456") == -1);
+        REQUIRE(userManager.loginUser("testuser2", "pass123") == -1);
     }
 }
