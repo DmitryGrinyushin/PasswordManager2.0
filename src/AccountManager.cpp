@@ -63,21 +63,12 @@ std::vector<Account> AccountManager::getAccountsForUser(int userId, const std::v
             account.id = sqlite3_column_int(stmt.get(), 0);
             account.accountName = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 1));
             account.login = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 2));
-            std::string encryptedPassword = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
+            account.encryptedPassword = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 3));
             account.url = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 4));
             account.notes = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 5));
             account.createdAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 6));
             account.updatedAt = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), 7));
-
-            try {
-                std::cout << "[TO DECRYPT] " << encryptedPassword << "\n"; // test
-                account.encryptedPassword = EncryptionManager::decryptField(encryptedPassword, key);
-                
-            } catch (const std::exception& e) {
-                Logger::getInstance().log(LogLevel::ERROR, "Decryption failed for account ID " + std::to_string(account.id) + ": " + e.what());
-                account.encryptedPassword = "<decryption error>";
-            }
-
+            
             accounts.push_back(account);
         }
         else if (rc == SQLITE_DONE) {

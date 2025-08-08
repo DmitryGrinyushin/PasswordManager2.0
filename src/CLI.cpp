@@ -2,6 +2,7 @@
 #include "PasswordHasher.h"
 #include "PasswordGenerator.h"
 #include "EncryptionManager.h"
+#include "Logger.h"
 #include <iostream>
 #include <limits>
 
@@ -25,9 +26,9 @@ int readIntSafe(const std::string& prompt) {
 
 int showMainMenu() {
     std::cout << "\n=== Password Manager ===\n";
-    std::cout << "1. Register\n";
-    std::cout << "2. Login\n";
-    std::cout << "3. Delete\n";
+    std::cout << "1. Register user\n";
+    std::cout << "2. Login user\n";
+    std::cout << "3. Delete user\n";
     std::cout << "0. Exit\n";
     int choice = readIntSafe("Select option: ");
     return choice;
@@ -185,15 +186,22 @@ void runCLI(DatabaseManager& dbManager, UserManager& userManager, AccountManager
                     auto accounts = accountManager.getAccountsForUser(userId, key);
                     for (const auto& acc : accounts) {
                         std::string decryptedPassword;
-                        
-                        decryptedPassword = acc.encryptedPassword;
+
+                        try {
+                            std::cout << "[TO DECRYPT] " << acc.encryptedPassword << "\n"; // test
+                            decryptedPassword = EncryptionManager::decryptField(acc.encryptedPassword, key);
+                            
+                        } catch (const std::exception& e) {
+                            Logger::getInstance().log(LogLevel::ERROR, "Decryption failed for account ID " + std::to_string(acc.id) + ": " + e.what());
+                            decryptedPassword = "<decryption error>";
+                        }
 
                         std::cout << "[" << acc.id << "] "
-                                  << acc.accountName << " | "
-                                  << acc.login << " | "
-                                  << acc.url << " | "
-                                  << "Password: " << decryptedPassword << " | "
-                                  << "Notes: " << acc.notes << "\n";
+                                << "Name: " << acc.accountName << " | "
+                                << "Login: " << acc.login << " | "
+                                << "URL: " << acc.url << " | "
+                                << "Password: " << decryptedPassword << " | "
+                                << "Notes: " << acc.notes << "\n";
                     }
                 } 
                 else if (subChoice == 3) {
