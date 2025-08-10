@@ -40,7 +40,37 @@ void WebServer::setupRoutes() {
         }
     });
 
-    // server_.Post("/login", ...);
+    server_.Post("/login", [this] (const httplib::Request& req, httplib::Response& res) {
+        try {
+            auto jsonBody = nlohmann::json::parse(req.body);
+
+            if (!jsonBody.contains("username") || !jsonBody.contains("password")) {
+                res.status = 400; // Bad Request
+                res.set_content(R"({"error": "Missing username or password"})", "application/json");
+                return;
+            }
+
+            std::string username = jsonBody["username"];
+            std::string password = jsonBody["password"];
+
+            int userId = userManager_.loginUser(username, password);
+
+            if (userId == -1) {
+                res.status = 401; // Unauthorized
+                res.set_content(R"({"error": "Invalid username or password"})", "application/json");
+                return;
+            }
+
+            res.status = 200; // OK
+            res.set_content(R"({"message": "User logged in successfully"})", "application/json");
+
+        }
+        catch (const std::exception& e) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid JSON"})", "application/json");
+            return;
+        }
+    });
 }
 
 void WebServer::start() {
