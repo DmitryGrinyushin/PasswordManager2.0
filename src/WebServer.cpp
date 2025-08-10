@@ -1,7 +1,8 @@
 #include "WebServer.h"
 #include <iostream>
 
-WebServer::WebServer(std::string& host, int port) : host_(host), port_(port) {}
+WebServer::WebServer(std::string& host, int port, UserManager& userManager)
+                : host_(host), port_(port), userManager_(userManager) {}
 
 void WebServer::setupRoutes() {
     server_.Get("/", [](const httplib::Request&, httplib::Response& res) {

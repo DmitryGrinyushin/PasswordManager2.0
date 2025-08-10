@@ -7,9 +7,22 @@ include_directories(include external)
 
 file(GLOB SOURCES "src/*.cpp")
 
-list(REMOVE_ITEM SOURCES "${CMAKE_SOURCE_DIR}/src/main_web.cpp")
+set(CLI_SOURCES "")
+foreach(src_file IN LISTS SOURCES)
+    if(NOT src_file MATCHES "main_web.cpp$")
+        list(APPEND CLI_SOURCES ${src_file})
+    endif()
+endforeach()
 
-add_executable(PasswordManager ${SOURCES})
+set(WEB_SOURCES "")
+foreach(src_file IN LISTS SOURCES)
+    if(NOT src_file MATCHES "main.cpp$")
+        list(APPEND WEB_SOURCES ${src_file})
+    endif()
+endforeach()
+
+add_executable(PasswordManager ${CLI_SOURCES})
+add_executable(PasswordManagerWeb ${WEB_SOURCES})
 
 find_package(OpenSSL REQUIRED)
 
@@ -19,16 +32,14 @@ target_link_libraries(PasswordManager
     sqlite3
 )
 
-set_target_properties(PasswordManager PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
-)
-
-add_executable(PasswordManagerWeb src/main_web.cpp src/WebServer.cpp)
-
 target_link_libraries(PasswordManagerWeb
     OpenSSL::SSL
     OpenSSL::Crypto
     sqlite3
+)
+
+set_target_properties(PasswordManager PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
 )
 
 set_target_properties(PasswordManagerWeb PROPERTIES
