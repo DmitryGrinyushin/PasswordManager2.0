@@ -24,15 +24,21 @@ endforeach()
 add_executable(PasswordManager ${CLI_SOURCES})
 add_executable(PasswordManagerWeb ${WEB_SOURCES})
 
+add_subdirectory(external/jwt-cpp)
+
 find_package(OpenSSL REQUIRED)
 
 target_link_libraries(PasswordManager
+    PRIVATE
+    jwt-cpp::jwt-cpp
     OpenSSL::SSL
     OpenSSL::Crypto
     sqlite3
 )
 
 target_link_libraries(PasswordManagerWeb
+    PRIVATE
+    jwt-cpp::jwt-cpp
     OpenSSL::SSL
     OpenSSL::Crypto
     sqlite3
