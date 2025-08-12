@@ -4,6 +4,25 @@
 #include "EnvUtils.h"
 #include "UserManager.h"
 #include <iostream>
+#include <jwt-cpp/jwt.h>
+
+void testJWT() {
+    // секрет, в реале нужно брать из env переменной
+    std::string secret = "supersecret";
+
+    // создаём токен с payload username = "testuser"
+    auto token = jwt::create()
+        .set_issuer("PasswordManager2.0")
+        .set_payload_claim("username", jwt::claim(std::string("testuser")))
+        .sign(jwt::algorithm::hs256{secret});
+
+    std::cout << "JWT token: " << token << std::endl;
+
+    // Декодируем и проверяем
+    auto decoded = jwt::decode(token);
+
+    std::cout << "Decoded username: " << decoded.get_payload_claim("username").as_string() << std::endl;
+}
 
 int main() {
     
@@ -16,6 +35,11 @@ int main() {
 
     UserManager userManager(dbManager.getDb());
     WebServer server(host, port, userManager);
+
+    //JWT test
+    std::cout << "Запуск теста JWT..." << std::endl;
+    testJWT();
+    //========
 
     std::thread serverThread([&server]() {
         server.start();
