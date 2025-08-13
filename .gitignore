@@ -6,6 +6,7 @@ build/
 *.exe
 *.out
 *.log
+*.env
 
 # === Project files ===
 log.txt

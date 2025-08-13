@@ -12,7 +12,7 @@ public:
     // token generation with time_to_live sec
     static std::string generateToken(const std::string& username, int ttlSeconds = 3600);
 
-    // token check and username extraction
+    // token verification and username extraction
     // throws exception!!!
     static std::string verifyToken(const std::string& token);
 };
