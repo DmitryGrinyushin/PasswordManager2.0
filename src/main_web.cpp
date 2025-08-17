@@ -6,6 +6,7 @@
 #include <iostream>
 #include <jwt-cpp/jwt.h>
 
+//JWT test
 void testJWT() {
     // секрет, в реале нужно брать из env переменной
     std::string secret = "supersecret";
@@ -23,6 +24,7 @@ void testJWT() {
 
     std::cout << "Decoded username: " << decoded.get_payload_claim("username").as_string() << std::endl;
 }
+// ======
 
 int main() {
     

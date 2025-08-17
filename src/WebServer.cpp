@@ -5,6 +5,9 @@
 WebServer::WebServer(std::string& host, int port, UserManager& userManager)
                 : host_(host), port_(port), userManager_(userManager) {}
 
+WebServer::WebServer(UserManager& userManager, const std::string& jwtSecret) 
+                : userManager_(userManager), jwtManager_(jwtSecret) {}
+
 void WebServer::setupRoutes() {
     server_.Get("/", [](const httplib::Request&, httplib::Response& res) {
         res.set_content("Password Manager Web API is running!", "text/plain");
@@ -61,8 +64,16 @@ void WebServer::setupRoutes() {
                 return;
             }
 
+        // JWT generation
+        std::string token = jwtManager_.generateToken(userId, username, 3600);
+
+        // responce with token
+        nlohmann::json responseJson;
+        responseJson["message"] = "User logged in successfully";
+        responseJson["token"] = token;
+
             res.status = 200; // OK
-            res.set_content(R"({"message": "User logged in successfully"})", "application/json");
+            res.set_content(responseJson.dump(), "application/json");
 
         }
         catch (const std::exception& e) {

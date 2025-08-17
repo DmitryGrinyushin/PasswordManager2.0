@@ -2,17 +2,20 @@
 
 #include <string>
 #include <chrono>
-#include <jwt-cpp/jwt.h>
+#include <utility>
 
 class JWTManager {
     static std::string secretKey;
 
 public:
+    JWTManager() = default;
+    explicit JWTManager(const std::string& secret) { secretKey = secret; }
+
     static void initSecret();
     // token generation with time_to_live sec
-    static std::string generateToken(const std::string& username, int ttlSeconds = 3600);
+    std::string generateToken(int userId, const std::string username, int ttlSeconds = 3600);
 
     // token verification and username extraction
     // throws exception!!!
-    static std::string verifyToken(const std::string& token);
+    std::pair<int, std::string> verifyToken(const std::string& token) const;
 };
