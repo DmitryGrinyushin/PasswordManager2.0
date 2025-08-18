@@ -6,23 +6,27 @@
 #include <iostream>
 #include <jwt-cpp/jwt.h>
 
-//JWT test
-void testJWT() {
-    // секрет, в реале нужно брать из env переменной
-    std::string secret = "supersecret";
+// JWT test
+void testJWTManager() {
+    JWTManager jwtManager;
+    jwtManager.initSecret();  // inicializing the secret
 
-    // создаём токен с payload username = "testuser"
-    auto token = jwt::create()
-        .set_issuer("PasswordManager2.0")
-        .set_payload_claim("username", jwt::claim(std::string("testuser")))
-        .sign(jwt::algorithm::hs256{secret});
+    int userId = 42;
+    std::string username = "testuser";
 
+    // create token
+    auto token = jwtManager.generateToken(userId, username, 3600);
     std::cout << "JWT token: " << token << std::endl;
 
-    // Декодируем и проверяем
-    auto decoded = jwt::decode(token);
+    // token verification
+    auto [decodedUserId, decodedUsername] = jwtManager.verifyToken(token);
 
-    std::cout << "Decoded username: " << decoded.get_payload_claim("username").as_string() << std::endl;
+    if (!decodedUsername.empty()) {
+        std::cout << "Decoded userId: " << decodedUserId << std::endl;
+        std::cout << "Decoded username: " << decodedUsername << std::endl;
+    } else {
+        std::cout << "Invalid token" << std::endl;
+    }
 }
 // ======
 
@@ -38,10 +42,10 @@ int main() {
     UserManager userManager(dbManager.getDb());
     WebServer server(host, port, userManager);
 
-    //JWT test
-    std::cout << "Запуск теста JWT..." << std::endl;
-    testJWT();
-    //========
+// JWT test
+    std::cout << "Test JWTManager..." << std::endl;
+    testJWTManager();
+//========
 
     std::thread serverThread([&server]() {
         server.start();
