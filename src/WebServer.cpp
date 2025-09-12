@@ -84,6 +84,32 @@ void WebServer::setupRoutes() {
     });
 }
 
+std::optional<std::pair<int, std::string>> WebServer::authenticateRequest(const httplib::Request& req, httplib::Response& res) {
+    if (!req.has_header("Authorization")) {
+        res.status = 401;
+        res.set_content(R"({"error": "Missing Authorization header"})", "application/json");
+        return std::nullopt;
+    }
+
+    std::string authHeader = req.get_header_value("Authorization");
+    if (authHeader.rfind("Bearer ", 0) != 0) {  // проверяем, что начинается с Bearer
+        res.status = 401;
+        res.set_content(R"({"error": "Invalid Authorization format"})", "application/json");
+        return std::nullopt;
+    }
+
+    std::string token = authHeader.substr(7); // убираем "Bearer "
+
+    try {
+        auto [userId, username] = jwtManager_.verifyToken(token);
+        return std::make_pair(userId, username);
+    } catch (const std::exception& e) {
+        res.status = 401;
+        res.set_content(R"({"error": "Invalid or expired token"})", "application/json");
+        return std::nullopt;
+    }
+}
+
 void WebServer::start() {
     setupRoutes();
     std::cout << "Server starting at " << host_ << ":" << port_ << std::endl;

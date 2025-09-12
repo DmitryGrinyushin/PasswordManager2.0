@@ -4,6 +4,7 @@
 #include "JWTManager.h"
 #include <httplib.h>
 #include <string>
+#include <optional>
 
 class WebServer {
     httplib::Server server_;
@@ -13,6 +14,7 @@ class WebServer {
     JWTManager jwtManager_;
 
     void setupRoutes();
+    std::optional<std::pair<int, std::string>> authenticateRequest(const httplib::Request& req, httplib::Response& res);
 
 public:
     WebServer(std::string& host, int port, UserManager& userManager);
