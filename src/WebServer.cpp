@@ -2,11 +2,8 @@
 #include "json.hpp"
 #include <iostream>
 
-WebServer::WebServer(std::string& host, int port, UserManager& userManager)
-                : host_(host), port_(port), userManager_(userManager) {}
-
-WebServer::WebServer(UserManager& userManager, const std::string& jwtSecret) 
-                : userManager_(userManager), jwtManager_(jwtSecret) {}
+WebServer::WebServer(std::string& host, int port, UserManager& userManager, AccountManager& accountManager, const std::string& jwtSecret)
+                : host_(host), port_(port), userManager_(userManager), accountManager_(accountManager), jwtManager_(jwtSecret) {}
 
 void WebServer::setupRoutes() {
     server_.Get("/", [](const httplib::Request&, httplib::Response& res) {
@@ -56,13 +53,15 @@ void WebServer::setupRoutes() {
             std::string username = jsonBody["username"];
             std::string password = jsonBody["password"];
 
-            int userId = userManager_.loginUser(username, password);
+            auto [userId, key] = userManager_.loginAndDeriveKey(username, password);
 
             if (userId == -1) {
                 res.status = 401; // Unauthorized
                 res.set_content(R"({"error": "Invalid username or password"})", "application/json");
                 return;
             }
+
+        activeKeys_[userId] = key;
 
         // JWT generation
         std::string token = jwtManager_.generateToken(userId, username, 3600);
