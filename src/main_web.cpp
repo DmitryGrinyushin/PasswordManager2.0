@@ -8,6 +8,7 @@
 #include <thread>
 
 // JWT test helper function to check token creation and verification
+/*
 void testJWTManager(const std::string& secret) {
     JWTManager jwtManager(secret);
 
@@ -28,6 +29,7 @@ void testJWTManager(const std::string& secret) {
         std::cout << "Invalid token: " << e.what() << std::endl;
     }
 }
+*/
 
 int main() {
     // Server host and port settings
@@ -49,8 +51,10 @@ int main() {
     std::string jwtSecret = getEnvOrDefault("PASSWORD_MANAGER_JWT_SECRET", "default_jwt_secret_key");
 
     // Run a simple JWT test to ensure token generation and verification works
+    /*
     std::cout << "Test JWTManager..." << std::endl;
     testJWTManager(jwtSecret);
+    */
 
     // Create the WebServer instance with all managers and secret
     WebServer server(host, port, userManager, accountManager, jwtSecret);

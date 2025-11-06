@@ -125,55 +125,189 @@ void WebServer::setupRoutes() {
     });
 
     // GET /accounts — get all accounts for the current user (passwords may be encrypted and require the session key to decrypt)
-server_.Get("/accounts", [this](const httplib::Request& req, httplib::Response& res) {
-    // 1) Authenticate user using JWT token from the Authorization header
-    auto auth = authenticateRequest(req, res);
-    if (!auth) return; // If authentication fails, authenticateRequest sets 401 and response
+    server_.Get("/accounts", [this](const httplib::Request& req, httplib::Response& res) {
+        // 1) Authenticate user using JWT token from the Authorization header
+        auto auth = authenticateRequest(req, res);
+        if (!auth) return; // If authentication fails, authenticateRequest sets 401 and response
 
-    auto [userId, username] = *auth;
+        auto [userId, username] = *auth;
 
-    // 2) Find the session key associated with this user (needed for decrypting passwords)
-    auto it = activeKeys_.find(userId);
-    if (it == activeKeys_.end()) {
-        // No active key found — user not logged in or session expired
-        res.status = 401;
-        res.set_content(R"({"error":"No active key for user, please login"})", "application/json");
-        return;
-    }
-
-    const std::vector<unsigned char>& key = it->second;
-
-    try {
-        // 3) Retrieve the accounts for the user (passwords might be encrypted)
-        auto accounts = accountManager_.getAccountsForUser(userId, key);
-
-        // 4) Build a JSON array from the accounts to send back as response
-        nlohmann::json responseJson = nlohmann::json::array();
-        for (const auto& acc : accounts) {
-            nlohmann::json j;
-            j["id"] = acc.id;
-            j["accountName"] = acc.accountName;
-            j["login"] = acc.login;
-            // If Account stores encryptedPassword, send it with explicit field name
-            j["password_encrypted"] = acc.encryptedPassword;
-            j["url"] = acc.url;
-            j["notes"] = acc.notes;
-            j["created_at"] = acc.createdAt;
-            j["updated_at"] = acc.updatedAt;
-            responseJson.push_back(j);
+        // 2) Find the session key associated with this user (needed for decrypting passwords)
+        auto it = activeKeys_.find(userId);
+        if (it == activeKeys_.end()) {
+            // No active key found — user not logged in or session expired
+            res.status = 401;
+            res.set_content(R"({"error":"No active key for user, please login"})", "application/json");
+            return;
         }
 
-        // 5) Return the JSON array with HTTP status 200 OK
-        res.status = 200;
-        res.set_content(responseJson.dump(), "application/json");
-    } catch (const std::exception& e) {
-        // Log the error message (e.what()) internally, but return a generic error message to client
-        res.status = 500;
-        nlohmann::json err;
-        err["error"] = "Failed to fetch accounts";
-        res.set_content(err.dump(), "application/json");
-    }
-});
+        const std::vector<unsigned char>& key = it->second;
+
+        try {
+            // 3) Retrieve the accounts for the user (passwords might be encrypted)
+            auto accounts = accountManager_.getAccountsForUser(userId, key);
+
+            // 4) Build a JSON array from the accounts to send back as response
+            nlohmann::json responseJson = nlohmann::json::array();
+            for (const auto& acc : accounts) {
+                nlohmann::json j;
+                j["id"] = acc.id;
+                j["accountName"] = acc.accountName;
+                j["login"] = acc.login;
+                // If Account stores encryptedPassword, send it with explicit field name
+                j["password_encrypted"] = acc.encryptedPassword;
+                j["url"] = acc.url;
+                j["notes"] = acc.notes;
+                j["created_at"] = acc.createdAt;
+                j["updated_at"] = acc.updatedAt;
+                responseJson.push_back(j);
+            }
+
+            // 5) Return the JSON array with HTTP status 200 OK
+            res.status = 200;
+            res.set_content(responseJson.dump(), "application/json");
+        } catch (const std::exception& e) {
+            // Log the error message (e.what()) internally, but return a generic error message to client
+            res.status = 500;
+            nlohmann::json err;
+            err["error"] = "Failed to fetch accounts";
+            res.set_content(err.dump(), "application/json");
+        }
+    });
+
+    // POST /accounts — create account
+    server_.Post("/accounts", [this](const httplib::Request& req, httplib::Response& res) {
+        auto auth = authenticateRequest(req, res);
+        if (!auth) return;
+        auto [userId, username] = *auth;
+
+        nlohmann::json jsonBody;
+        try {
+            jsonBody = nlohmann::json::parse(req.body);
+        } catch (...) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid JSON"})", "application/json");
+            return;
+        }
+
+        if (!jsonBody.contains("accountName") || !jsonBody.contains("login") || !jsonBody.contains("password")) {
+            res.status = 400;
+            res.set_content(R"({"error": "Missing required fields: accountName, login, password"})", "application/json");
+            return;
+        }
+
+        try {
+            accountManager_.addAccount(
+                userId,
+                jsonBody["accountName"],
+                jsonBody["login"],
+                jsonBody["password"],
+                jsonBody.value("url", ""),
+                jsonBody.value("notes", ""),
+                activeKeys_[userId]
+            );
+
+            res.status = 201;
+            res.set_content(R"({"message": "Account created successfully"})", "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            nlohmann::json err;
+            err["error"] = e.what();
+            res.set_content(err.dump(), "application/json");
+        }
+    });
+
+    // extract ID from path
+    auto getAccountIdFromPath = [](const std::string& path) -> int {
+        const std::string prefix = "/accounts/";
+        if (path.compare(0, prefix.size(), prefix) != 0) {
+            return -1;
+        }
+        try {
+            return std::stoi(path.substr(prefix.size()));
+        } catch (...) {
+            return -1;
+        }
+    };
+
+    // PUT /accounts/{id} — update account
+    server_.Put(R"(/accounts/.*)", [this, getAccountIdFromPath](const httplib::Request& req, httplib::Response& res) {
+        auto auth = authenticateRequest(req, res);
+        if (!auth) return;
+        auto [userId, username] = *auth;
+
+        int accountId = getAccountIdFromPath(req.path);
+        if (accountId == -1) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid account id in URL"})", "application/json");
+            return;
+        }
+
+        nlohmann::json jsonBody;
+        try {
+            jsonBody = nlohmann::json::parse(req.body);
+        } catch (...) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid JSON"})", "application/json");
+            return;
+        }
+
+        try {
+            accountManager_.updateAccount(
+                userId,
+                accountId,
+                jsonBody.value("accountName", ""),
+                jsonBody.value("login", ""),
+                jsonBody.value("password", ""),
+                jsonBody.value("url", ""),
+                jsonBody.value("notes", ""),
+                activeKeys_[userId]
+            );
+            res.status = 200;
+            res.set_content(R"({"message": "Account updated successfully"})", "application/json");
+        } catch (const std::exception& e) {
+            std::string errMsg = e.what();
+            if (errMsg.find("not found") != std::string::npos) {
+                res.status = 404;
+            } else {
+                res.status = 500;
+            }
+            nlohmann::json err;
+            err["error"] = errMsg;
+            res.set_content(err.dump(), "application/json");
+        }
+    });
+
+    // DELETE /accounts/{id} — delete account
+    server_.Delete(R"(/accounts/.*)", [this, getAccountIdFromPath](const httplib::Request& req, httplib::Response& res) {
+        auto auth = authenticateRequest(req, res);
+        if (!auth) return;
+        auto [userId, username] = *auth;
+
+        int accountId = getAccountIdFromPath(req.path);
+        if (accountId == -1) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid account id in URL"})", "application/json");
+            return;
+        }
+
+        try {
+            accountManager_.deleteAccount(userId, accountId);
+            res.status = 200;
+            res.set_content(R"({"message": "Account deleted successfully"})", "application/json");
+        } catch (const std::exception& e) {
+            std::string errMsg = e.what();
+            if (errMsg.find("not found") != std::string::npos) {
+                res.status = 404;
+            } else {
+                res.status = 500;
+            }
+            nlohmann::json err;
+            err["error"] = errMsg;
+            res.set_content(err.dump(), "application/json");
+        }
+    });
+
 }
 
 std::optional<std::pair<int, std::string>> WebServer::authenticateRequest(const httplib::Request& req, httplib::Response& res) {
