@@ -40,45 +40,87 @@ void WebServer::setupRoutes() {
         }
     });
 
-    server_.Post("/login", [this] (const httplib::Request& req, httplib::Response& res) {
+    server_.Post("/login", [this](const httplib::Request& req, httplib::Response& res) {
+        // JSON reading — if not - 400
+        nlohmann::json jsonBody;
         try {
-            auto jsonBody = nlohmann::json::parse(req.body);
+            jsonBody = nlohmann::json::parse(req.body);
+        } catch (...) {
+            res.status = 400;
+            res.set_content(R"({"error": "Invalid JSON"})", "application/json");
+            return;
+        }
 
-            if (!jsonBody.contains("username") || !jsonBody.contains("password")) {
-                res.status = 400; // Bad Request
-                res.set_content(R"({"error": "Missing username or password"})", "application/json");
-                return;
-            }
+        if (!jsonBody.contains("username") || !jsonBody.contains("password")) {
+            res.status = 400; // Bad Request
+            res.set_content(R"({"error": "Missing username or password"})", "application/json");
+            return;
+        }
 
-            std::string username = jsonBody["username"];
-            std::string password = jsonBody["password"];
+        std::string username = jsonBody["username"];
+        std::string password = jsonBody["password"];
 
-            auto [userId, key] = userManager_.loginAndDeriveKey(username, password);
+        // login check — if not 401 (Unauthorized)
+        int userId = -1;
+        std::vector<unsigned char> key;
 
-            if (userId == -1) {
-                res.status = 401; // Unauthorized
-                res.set_content(R"({"error": "Invalid username or password"})", "application/json");
-                return;
-            }
+        try {
+            std::tie(userId, key) = userManager_.loginAndDeriveKey(username, password);
+        } catch (...) {
+            res.status = 401;
+            res.set_content(R"({"error": "Invalid username or password"})", "application/json");
+            return;
+        }
 
+        if (userId == -1) {
+            res.status = 401;
+            res.set_content(R"({"error": "Invalid username or password"})", "application/json");
+            return;
+        }
+
+        // key saving
         activeKeys_[userId] = key;
 
         // JWT generation
         std::string token = jwtManager_.generateToken(userId, username, 3600);
 
-        // responce with token
         nlohmann::json responseJson;
         responseJson["message"] = "User logged in successfully";
         responseJson["token"] = token;
 
-            res.status = 200; // OK
-            res.set_content(responseJson.dump(), "application/json");
+        res.status = 200;
+        res.set_content(responseJson.dump(), "application/json");
+    });
 
-        }
-        catch (const std::exception& e) {
-            res.status = 400;
-            res.set_content(R"({"error": "Invalid JSON"})", "application/json");
-            return;
+    server_.Get("/user", [this](const httplib::Request& req, httplib::Response& res) {
+        auto auth = authenticateRequest(req, res);
+        if (!auth) return;
+
+        auto [userId, username] = *auth;
+
+        nlohmann::json userJson;
+        userJson["id"] = userId;
+        userJson["username"] = username;
+
+        res.status = 200;
+        res.set_content(userJson.dump(), "application/json");
+    });
+
+    server_.Delete("/user", [this](const httplib::Request& req, httplib::Response& res) {
+        auto auth = authenticateRequest(req, res);
+        if (!auth) return;
+
+        auto [userId, username] = *auth;
+
+        try {
+            userManager_.deleteUser(username);
+            res.status = 200;
+            res.set_content(R"({"message": "User deleted successfully"})", "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            nlohmann::json err;
+            err["error"] = e.what();
+            res.set_content(err.dump(), "application/json");
         }
     });
 }
@@ -91,13 +133,13 @@ std::optional<std::pair<int, std::string>> WebServer::authenticateRequest(const 
     }
 
     std::string authHeader = req.get_header_value("Authorization");
-    if (authHeader.rfind("Bearer ", 0) != 0) {  // проверяем, что начинается с Bearer
+    if (authHeader.rfind("Bearer ", 0) != 0) {  // starts with Bearer
         res.status = 401;
         res.set_content(R"({"error": "Invalid Authorization format"})", "application/json");
         return std::nullopt;
     }
 
-    std::string token = authHeader.substr(7); // убираем "Bearer "
+    std::string token = authHeader.substr(7); // erase "Bearer "
 
     try {
         auto [userId, username] = jwtManager_.verifyToken(token);
