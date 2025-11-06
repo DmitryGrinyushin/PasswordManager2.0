@@ -123,6 +123,57 @@ void WebServer::setupRoutes() {
             res.set_content(err.dump(), "application/json");
         }
     });
+
+    // GET /accounts — get all accounts for the current user (passwords may be encrypted and require the session key to decrypt)
+server_.Get("/accounts", [this](const httplib::Request& req, httplib::Response& res) {
+    // 1) Authenticate user using JWT token from the Authorization header
+    auto auth = authenticateRequest(req, res);
+    if (!auth) return; // If authentication fails, authenticateRequest sets 401 and response
+
+    auto [userId, username] = *auth;
+
+    // 2) Find the session key associated with this user (needed for decrypting passwords)
+    auto it = activeKeys_.find(userId);
+    if (it == activeKeys_.end()) {
+        // No active key found — user not logged in or session expired
+        res.status = 401;
+        res.set_content(R"({"error":"No active key for user, please login"})", "application/json");
+        return;
+    }
+
+    const std::vector<unsigned char>& key = it->second;
+
+    try {
+        // 3) Retrieve the accounts for the user (passwords might be encrypted)
+        auto accounts = accountManager_.getAccountsForUser(userId, key);
+
+        // 4) Build a JSON array from the accounts to send back as response
+        nlohmann::json responseJson = nlohmann::json::array();
+        for (const auto& acc : accounts) {
+            nlohmann::json j;
+            j["id"] = acc.id;
+            j["accountName"] = acc.accountName;
+            j["login"] = acc.login;
+            // If Account stores encryptedPassword, send it with explicit field name
+            j["password_encrypted"] = acc.encryptedPassword;
+            j["url"] = acc.url;
+            j["notes"] = acc.notes;
+            j["created_at"] = acc.createdAt;
+            j["updated_at"] = acc.updatedAt;
+            responseJson.push_back(j);
+        }
+
+        // 5) Return the JSON array with HTTP status 200 OK
+        res.status = 200;
+        res.set_content(responseJson.dump(), "application/json");
+    } catch (const std::exception& e) {
+        // Log the error message (e.what()) internally, but return a generic error message to client
+        res.status = 500;
+        nlohmann::json err;
+        err["error"] = "Failed to fetch accounts";
+        res.set_content(err.dump(), "application/json");
+    }
+});
 }
 
 std::optional<std::pair<int, std::string>> WebServer::authenticateRequest(const httplib::Request& req, httplib::Response& res) {

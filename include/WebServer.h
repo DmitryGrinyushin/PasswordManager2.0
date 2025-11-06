@@ -6,6 +6,7 @@
 #include <httplib.h>
 #include <string>
 #include <optional>
+#include <unordered_map>
 
 class WebServer {
     httplib::Server server_;
