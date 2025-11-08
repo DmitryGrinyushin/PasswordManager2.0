@@ -47,7 +47,7 @@ int main() {
     UserManager userManager(dbManager.getDb());
     AccountManager accountManager(dbManager, userManager);
 
-    // Get JWT secret key from environment variable or use default
+    // Get JWT secret key from environment variable or fail
     std::string jwtSecret = getEnvOrDefault("PASSWORD_MANAGER_JWT_SECRET", "default_jwt_secret_key");
 
     // Run a simple JWT test to ensure token generation and verification works

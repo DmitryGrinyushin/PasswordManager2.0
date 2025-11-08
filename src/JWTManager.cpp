@@ -5,24 +5,11 @@
 
 std::string JWTManager::secretKey;
 
-void JWTManager::initSecret() {
-    const char* envSecret = std::getenv("JWT_SECRET");
-    if (envSecret) {
-        secretKey = envSecret;
-    } else {
-        // fallback: random secret generation (for the server session duration)
-        static const char charset[] =
-            "0123456789"
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            "abcdefghijklmnopqrstuvwxyz";
-        std::mt19937 gen(std::random_device{}());
-        std::uniform_int_distribution<> dist(0, sizeof(charset) - 2);
-        
-        secretKey.resize(32);
-        for (auto& ch : secretKey) {
-            ch = charset[dist(gen)];
-        }
+JWTManager::JWTManager(const std::string& secret) {
+    if (secret.empty()) {
+        throw std::runtime_error("JWT secret cannot be empty");
     }
+    secretKey = secret;
 }
 
 std::string JWTManager::generateToken(int userId, std::string username, int ttlSeconds) {
