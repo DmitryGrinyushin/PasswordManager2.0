@@ -30,6 +30,14 @@ void testJWTManager(const std::string& secret) {
     }
 }
 */
+    std::string getEnvOrFail(const char* name) {
+        auto v = std::getenv(name);
+        if (!v || std::string(v).empty()) {
+            std::cerr << "Fatal error: missing required ENV " << name << "\n";
+            exit(1);
+        }
+        return v;
+    }
 
 int main() {
     // Server host and port settings
@@ -48,7 +56,7 @@ int main() {
     AccountManager accountManager(dbManager, userManager);
 
     // Get JWT secret key from environment variable or fail
-    std::string jwtSecret = getEnvOrDefault("PASSWORD_MANAGER_JWT_SECRET", "default_jwt_secret_key");
+    std::string jwtSecret = getEnvOrFail("JWT_SECRET");
 
     // Run a simple JWT test to ensure token generation and verification works
     /*
