@@ -20,7 +20,6 @@ std::string generateSalt(size_t length) {
 
 std::string hashPassword(const std::string& password, const std::string& salt, int iterations) {
     unsigned char hash[32]; // 256-bit
-    std::string combined = salt + password;
 
     PKCS5_PBKDF2_HMAC(
         password.c_str(),

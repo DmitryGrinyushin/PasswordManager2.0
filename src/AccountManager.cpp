@@ -17,7 +17,7 @@ void AccountManager::addAccount(int userId,
                         const std::vector<unsigned char>& key) {
 
     std::string encryptedPassword = EncryptionManager::encryptField(plainPassword, key);
-    std::cout << "[ENCRYPTED] " << encryptedPassword << "\n"; // test
+    
     const char* sql = 
         "INSERT INTO accounts (user_id, account_name, login, password_encrypted, url, notes) "
         "VALUES (?, ?, ?, ?, ?, ?);";
@@ -40,7 +40,6 @@ void AccountManager::addAccount(int userId,
 
     int accountId = static_cast<int>(sqlite3_last_insert_rowid(dbManager.getDb()));
 
-    std::cout << "Account added successfully.\n"; // to be removed before production
     Logger::getInstance().log(LogLevel::INFO, "Account \"" + accountName + "\" with ID " + std::to_string(accountId) + " added for user ID " + std::to_string(userId));
 }
 
@@ -130,7 +129,6 @@ void AccountManager::updateAccount(int userId,
         throw std::runtime_error(warning);
     }
 
-    std::cout << "Account updated successfully.\n";
     Logger::getInstance().log(LogLevel::INFO, "User ID " + std::to_string(userId) + " updated account ID " + std::to_string(accountId));
 }
 
@@ -157,6 +155,5 @@ void AccountManager::deleteAccount(int userId, int accountId)
         throw std::runtime_error(warning);
     }
 
-    std::cout << "Account deleted successfully.\n";
     Logger::getInstance().log(LogLevel::INFO, "User ID " + std::to_string(userId) + " deleted account ID " + std::to_string(accountId));
 }

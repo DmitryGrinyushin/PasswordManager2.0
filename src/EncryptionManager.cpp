@@ -5,19 +5,28 @@
 #include <openssl/buffer.h>
 #include <stdexcept>
 #include <cstring>
-#include <iostream> // for debug output
+#include <iostream> // optional debug
+#include <memory>
 
 // Helper: base64 encode
-std::string base64Encode(const std::vector<unsigned char>& data) {
-    BIO* bio = BIO_new(BIO_s_mem());
+static std::string base64Encode(const std::vector<unsigned char>& data) {
+    BIO* mem = BIO_new(BIO_s_mem());
     BIO* b64 = BIO_new(BIO_f_base64());
+    if (!mem || !b64) {
+        BIO_free_all(mem);
+        BIO_free_all(b64);
+        throw std::runtime_error("base64Encode: BIO allocation failed");
+    }
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // no newlines
-    bio = BIO_push(b64, bio);
+    BIO* bio = BIO_push(b64, mem);
 
-    BIO_write(bio, data.data(), static_cast<int>(data.size()));
+    if (BIO_write(bio, data.data(), static_cast<int>(data.size())) <= 0) {
+        BIO_free_all(bio);
+        throw std::runtime_error("base64Encode: BIO_write failed");
+    }
     BIO_flush(bio);
 
-    BUF_MEM* bufferPtr;
+    BUF_MEM* bufferPtr = nullptr;
     BIO_get_mem_ptr(bio, &bufferPtr);
     std::string result(bufferPtr->data, bufferPtr->length);
 
@@ -26,14 +35,19 @@ std::string base64Encode(const std::vector<unsigned char>& data) {
 }
 
 // Helper: base64 decode
-std::vector<unsigned char> base64Decode(const std::string& input) {
-    BIO* bio = BIO_new_mem_buf(input.data(), static_cast<int>(input.size()));
+static std::vector<unsigned char> base64Decode(const std::string& input) {
+    BIO* mem = BIO_new_mem_buf(input.data(), static_cast<int>(input.size()));
     BIO* b64 = BIO_new(BIO_f_base64());
+    if (!mem || !b64) {
+        BIO_free_all(mem);
+        BIO_free_all(b64);
+        throw std::runtime_error("base64Decode: BIO allocation failed");
+    }
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-    bio = BIO_push(b64, bio);
+    BIO* bio = BIO_push(b64, mem);
 
     std::vector<unsigned char> buffer(input.size());
-    int length = BIO_read(bio, buffer.data(), static_cast<int>(input.size()));
+    int length = BIO_read(bio, buffer.data(), static_cast<int>(buffer.size()));
     BIO_free_all(bio);
 
     if (length <= 0)
@@ -57,43 +71,48 @@ std::vector<unsigned char> EncryptionManager::encrypt(
     std::vector<unsigned char>& outIV,
     std::vector<unsigned char>& outTag
 ) {
+    if (key.size() != 32) {
+        throw std::runtime_error("AES-256-GCM key must be 32 bytes");
+    }
+
     const size_t ivLength = 12; // standard IV length for GCM
     outIV = generateRandomBytes(ivLength);
 
-    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) throw std::runtime_error("Failed to create encryption context");
+    EVP_CIPHER_CTX* raw_ctx = EVP_CIPHER_CTX_new();
+    if (!raw_ctx) throw std::runtime_error("Failed to create encryption context");
 
-    if (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1)
+    // RAII wrapper will free ctx automatically
+    std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx(raw_ctx, &EVP_CIPHER_CTX_free);
+
+    if (EVP_EncryptInit_ex(raw_ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1)
         throw std::runtime_error("Failed to initialize AES-GCM encryption");
 
-    if (EVP_EncryptInit_ex(ctx, nullptr, nullptr, key.data(), outIV.data()) != 1)
+    if (EVP_EncryptInit_ex(raw_ctx, nullptr, nullptr, key.data(), outIV.data()) != 1)
         throw std::runtime_error("Failed to set encryption key and IV");
 
-    std::vector<unsigned char> ciphertext(plaintext.size());
+    std::vector<unsigned char> ciphertext(static_cast<size_t>(plaintext.size()) + EVP_CIPHER_block_size(EVP_aes_256_gcm()));
     int len = 0;
 
-    if (EVP_EncryptUpdate(ctx, ciphertext.data(), &len,
-                          reinterpret_cast<const unsigned char*>(plaintext.data()),
-                          static_cast<int>(plaintext.size())) != 1)
-        throw std::runtime_error("Encryption failed during update");
+    if (plaintext.size() > 0) {
+        if (EVP_EncryptUpdate(raw_ctx, ciphertext.data(), &len,
+                              reinterpret_cast<const unsigned char*>(plaintext.data()),
+                              static_cast<int>(plaintext.size())) != 1)
+            throw std::runtime_error("Encryption failed during update");
+    } else {
+        len = 0;
+    }
 
     int ciphertext_len = len;
 
-    if (EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len) != 1)
+    if (EVP_EncryptFinal_ex(raw_ctx, ciphertext.data() + len, &len) != 1)
         throw std::runtime_error("Encryption failed during finalization");
 
     ciphertext_len += len;
     ciphertext.resize(ciphertext_len); // Trim to actual length
 
     outTag.resize(16); // 128-bit tag
-    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, outTag.data()) != 1)
+    if (EVP_CIPHER_CTX_ctrl(raw_ctx, EVP_CTRL_GCM_GET_TAG, static_cast<int>(outTag.size()), outTag.data()) != 1)
         throw std::runtime_error("Failed to retrieve GCM tag");
-
-    EVP_CIPHER_CTX_free(ctx);
-
-    std::cout << "[ENCRYPT DEBUG] iv=" << base64Encode(outIV)
-              << " ciphertext=" << base64Encode(ciphertext)
-              << " tag=" << base64Encode(outTag) << "\n";
 
     return ciphertext;
 }
@@ -104,33 +123,50 @@ std::string EncryptionManager::decrypt(
     const std::vector<unsigned char>& iv,
     const std::vector<unsigned char>& tag
 ) {
-    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) throw std::runtime_error("Failed to create decryption context");
+    if (key.size() != 32) {
+        throw std::runtime_error("AES-256-GCM key must be 32 bytes");
+    }
 
-    if (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1)
+    if (iv.size() != 12) {
+        throw std::runtime_error("Invalid IV size for AES-GCM");
+    }
+
+    if (tag.size() != 16) {
+        throw std::runtime_error("Invalid GCM tag size");
+    }
+
+    EVP_CIPHER_CTX* raw_ctx = EVP_CIPHER_CTX_new();
+    if (!raw_ctx) throw std::runtime_error("Failed to create decryption context");
+
+    std::unique_ptr<EVP_CIPHER_CTX, decltype(&EVP_CIPHER_CTX_free)> ctx(raw_ctx, &EVP_CIPHER_CTX_free);
+
+    if (EVP_DecryptInit_ex(raw_ctx, EVP_aes_256_gcm(), nullptr, nullptr, nullptr) != 1)
         throw std::runtime_error("Failed to initialize AES-GCM decryption");
 
-    if (EVP_DecryptInit_ex(ctx, nullptr, nullptr, key.data(), iv.data()) != 1)
+    if (EVP_DecryptInit_ex(raw_ctx, nullptr, nullptr, key.data(), iv.data()) != 1)
         throw std::runtime_error("Failed to set decryption key and IV");
 
-    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, const_cast<unsigned char*>(tag.data())) != 1)
+    if (EVP_CIPHER_CTX_ctrl(raw_ctx, EVP_CTRL_GCM_SET_TAG, static_cast<int>(tag.size()), const_cast<unsigned char*>(tag.data())) != 1)
         throw std::runtime_error("Failed to set GCM tag");
 
     std::vector<unsigned char> plaintext(ciphertext.size());
     int len = 0;
 
-    if (EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), static_cast<int>(ciphertext.size())) != 1)
-        throw std::runtime_error("Decryption failed during update");
+    if (!ciphertext.empty()) {
+        if (EVP_DecryptUpdate(raw_ctx, plaintext.data(), &len, ciphertext.data(), static_cast<int>(ciphertext.size())) != 1)
+            throw std::runtime_error("Decryption failed during update");
+    } else {
+        len = 0;
+    }
 
     int plaintext_len = len;
 
-    if (EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len) != 1)
+    if (EVP_DecryptFinal_ex(raw_ctx, plaintext.data() + len, &len) != 1)
         throw std::runtime_error("Decryption failed: authentication check failed");
 
     plaintext_len += len;
     plaintext.resize(plaintext_len);
 
-    EVP_CIPHER_CTX_free(ctx);
     return std::string(plaintext.begin(), plaintext.end());
 }
 
@@ -155,6 +191,16 @@ std::string EncryptionManager::decryptField(const std::string& encrypted, const 
     std::vector<unsigned char> iv = base64Decode(ivB64);
     std::vector<unsigned char> ciphertext = base64Decode(ciphertextB64);
     std::vector<unsigned char> tag = base64Decode(tagB64);
+
+    if (iv.size() != 12)
+        throw std::runtime_error("Invalid IV size for AES-GCM");
+
+    if (tag.size() != 16)
+        throw std::runtime_error("Invalid GCM tag size");
+
+    if (ciphertext.empty()) {
+        throw std::runtime_error("Ciphertext is empty or corrupted");
+    }
 
     return decrypt(ciphertext, key, iv, tag);
 }
