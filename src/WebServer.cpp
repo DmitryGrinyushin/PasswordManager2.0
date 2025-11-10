@@ -1,5 +1,6 @@
 #include "WebServer.h"
 #include "json.hpp"
+#include "Logger.h"
 #include <iostream>
 
 WebServer::WebServer(std::string& host, int port, UserManager& userManager, AccountManager& accountManager, const std::string& jwtSecret)
@@ -28,25 +29,27 @@ void WebServer::setupRoutes() {
                 res.status = 201; // Created
                 res.set_content(R"({"message": "User registered successfully"})", "application/json");
             } catch (const std::exception& e) {
+                Logger::getInstance().log(LogLevel::ERROR, e.what());
                 res.status = 409; // Conflict (user already exists)
-                std::string errorJson = std::string(R"({"error": ")") + e.what() + "\"}";
-                res.set_content(errorJson, "application/json");
+                res.set_content(R"({"error": "User already exists"})", "application/json");
             }
         }
-        catch (const std::exception& e) {
-            res.status = 400;
+        catch (const nlohmann::json::parse_error& e) {
+            Logger::getInstance().log(LogLevel::ERROR, e.what());
+            res.status = 400; // Invalid JSON
             res.set_content(R"({"error": "Invalid JSON"})", "application/json");
             return;
         }
     });
 
     server_.Post("/login", [this](const httplib::Request& req, httplib::Response& res) {
-        // JSON reading — if not - 400
+        // JSON reading
         nlohmann::json jsonBody;
         try {
             jsonBody = nlohmann::json::parse(req.body);
-        } catch (...) {
-            res.status = 400;
+        } catch (const std::exception& e) {
+            Logger::getInstance().log(LogLevel::ERROR, e.what());
+            res.status = 400; // Invalid JSON
             res.set_content(R"({"error": "Invalid JSON"})", "application/json");
             return;
         }
@@ -66,7 +69,8 @@ void WebServer::setupRoutes() {
 
         try {
             std::tie(userId, key) = userManager_.loginAndDeriveKey(username, password);
-        } catch (...) {
+        } catch (const std::exception& e) {
+            Logger::getInstance().log(LogLevel::ERROR, e.what());
             res.status = 401;
             res.set_content(R"({"error": "Invalid username or password"})", "application/json");
             return;
@@ -117,10 +121,15 @@ void WebServer::setupRoutes() {
             res.status = 200;
             res.set_content(R"({"message": "User deleted successfully"})", "application/json");
         } catch (const std::exception& e) {
-            res.status = 500;
-            nlohmann::json err;
-            err["error"] = e.what();
-            res.set_content(err.dump(), "application/json");
+            Logger::getInstance().log(LogLevel::ERROR, std::string("Delete user error: ") + e.what());
+            std::string errMsg = e.what();
+            if (errMsg.find("not found") != std::string::npos) {
+                res.status = 404;
+                res.set_content(R"({"error": "User not found"})", "application/json");
+            } else {
+                res.status = 500;
+                res.set_content(R"({"error": "Internal server error"})", "application/json");
+            }
         }
     });
 
@@ -136,6 +145,11 @@ void WebServer::setupRoutes() {
         auto it = activeKeys_.find(userId);
         if (it == activeKeys_.end()) {
             // No active key found — user not logged in or session expired
+            Logger::getInstance().log(
+                LogLevel::WARNING,
+                "GET /accounts: No active session key for userId=" + std::to_string(userId)
+            );
+
             res.status = 401;
             res.set_content(R"({"error":"No active key for user, please login"})", "application/json");
             return;
@@ -168,10 +182,14 @@ void WebServer::setupRoutes() {
             res.set_content(responseJson.dump(), "application/json");
         } catch (const std::exception& e) {
             // Log the error message (e.what()) internally, but return a generic error message to client
+            Logger::getInstance().log(
+                LogLevel::ERROR,
+                "GET /accounts failed for userId=" + std::to_string(userId) +
+                " reason=" + e.what()
+            );
+            
             res.status = 500;
-            nlohmann::json err;
-            err["error"] = "Failed to fetch accounts";
-            res.set_content(err.dump(), "application/json");
+            res.set_content(R"({"error":"Failed to fetch accounts"})", "application/json");
         }
     });
 
@@ -179,14 +197,17 @@ void WebServer::setupRoutes() {
     server_.Post("/accounts", [this](const httplib::Request& req, httplib::Response& res) {
         auto auth = authenticateRequest(req, res);
         if (!auth) return;
+
         auto [userId, username] = *auth;
 
         nlohmann::json jsonBody;
         try {
             jsonBody = nlohmann::json::parse(req.body);
-        } catch (...) {
-            res.status = 400;
+        } catch (const std::exception& e) {
+            Logger::getInstance().log(LogLevel::ERROR, e.what());
+            res.status = 400; // Invalid JSON
             res.set_content(R"({"error": "Invalid JSON"})", "application/json");
+            
             return;
         }
 
@@ -210,10 +231,16 @@ void WebServer::setupRoutes() {
             res.status = 201;
             res.set_content(R"({"message": "Account created successfully"})", "application/json");
         } catch (const std::exception& e) {
-            res.status = 500;
-            nlohmann::json err;
-            err["error"] = e.what();
-            res.set_content(err.dump(), "application/json");
+
+            Logger::getInstance().log(LogLevel::ERROR, std::string("Account creating error: ") + e.what());
+            std::string errMsg = e.what();
+            if (errMsg.find("not found") != std::string::npos) {
+                res.status = 404;
+                res.set_content(R"({"error": "Account not found"})", "application/json");
+            } else {
+                res.status = 500;
+                res.set_content(R"({"error": "Internal server error"})", "application/json");
+            }
         }
     });
 
@@ -246,9 +273,10 @@ void WebServer::setupRoutes() {
         nlohmann::json jsonBody;
         try {
             jsonBody = nlohmann::json::parse(req.body);
-        } catch (...) {
-            res.status = 400;
-            res.set_content(R"({"error": "Invalid JSON"})", "application/json");
+        } catch (const std::exception& e) {
+            Logger::getInstance().log(LogLevel::ERROR, e.what());
+                res.status = 400; // Invalid JSON
+                res.set_content(R"({"error": "Invalid JSON"})", "application/json");
             return;
         }
 
@@ -266,15 +294,17 @@ void WebServer::setupRoutes() {
             res.status = 200;
             res.set_content(R"({"message": "Account updated successfully"})", "application/json");
         } catch (const std::exception& e) {
+
+            Logger::getInstance().log(LogLevel::ERROR, std::string("Account updating error: ") + e.what());
             std::string errMsg = e.what();
             if (errMsg.find("not found") != std::string::npos) {
                 res.status = 404;
+                res.set_content(R"({"error": "Account not found"})", "application/json");
             } else {
                 res.status = 500;
+                res.set_content(R"({"error": "Internal server error"})", "application/json");
             }
-            nlohmann::json err;
-            err["error"] = errMsg;
-            res.set_content(err.dump(), "application/json");
+
         }
     });
 
@@ -296,15 +326,15 @@ void WebServer::setupRoutes() {
             res.status = 200;
             res.set_content(R"({"message": "Account deleted successfully"})", "application/json");
         } catch (const std::exception& e) {
+            Logger::getInstance().log(LogLevel::ERROR, std::string("Account deleting error: ") + e.what());
             std::string errMsg = e.what();
             if (errMsg.find("not found") != std::string::npos) {
                 res.status = 404;
+                res.set_content(R"({"error": "Account not found"})", "application/json");
             } else {
                 res.status = 500;
+                res.set_content(R"({"error": "Internal server error"})", "application/json");
             }
-            nlohmann::json err;
-            err["error"] = errMsg;
-            res.set_content(err.dump(), "application/json");
         }
     });
 
@@ -312,6 +342,11 @@ void WebServer::setupRoutes() {
 
 std::optional<std::pair<int, std::string>> WebServer::authenticateRequest(const httplib::Request& req, httplib::Response& res) {
     if (!req.has_header("Authorization")) {
+        Logger::getInstance().log(
+            LogLevel::WARNING,
+            "Auth failed: missing Authorization header"
+        );
+        
         res.status = 401;
         res.set_content(R"({"error": "Missing Authorization header"})", "application/json");
         return std::nullopt;
@@ -319,6 +354,11 @@ std::optional<std::pair<int, std::string>> WebServer::authenticateRequest(const 
 
     std::string authHeader = req.get_header_value("Authorization");
     if (authHeader.rfind("Bearer ", 0) != 0) {  // starts with Bearer
+        Logger::getInstance().log(
+            LogLevel::WARNING,
+            "Auth failed: invalid Authorization format (" + authHeader + ")"
+        );
+
         res.status = 401;
         res.set_content(R"({"error": "Invalid Authorization format"})", "application/json");
         return std::nullopt;
@@ -329,7 +369,13 @@ std::optional<std::pair<int, std::string>> WebServer::authenticateRequest(const 
     try {
         auto [userId, username] = jwtManager_.verifyToken(token);
         return std::make_pair(userId, username);
+
     } catch (const std::exception& e) {
+        Logger::getInstance().log(
+            LogLevel::WARNING,
+            std::string("Auth failed: invalid or expired JWT: ") + e.what()
+        );
+
         res.status = 401;
         res.set_content(R"({"error": "Invalid or expired token"})", "application/json");
         return std::nullopt;
