@@ -1,0 +1,196 @@
+openapi: 3.0.0
+info:
+  title: PasswordManager2.0 API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /register:
+    post:
+      summary: Register new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+        "400": { description: Missing or invalid fields }
+        "409": { description: User already exists }
+
+  /login:
+    post:
+      summary: User login and JWT issue
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        "401": { description: Invalid username or password }
+
+  /user:
+    get:
+      summary: Get current user info
+      operationId: getCurrentUser
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: User info returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "401": { description: Unauthorized }
+
+    delete:
+      summary: Delete current user
+      operationId: deleteCurrentUser
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200": { description: User deleted }
+        "404": { description: User not found }
+
+  /accounts:
+    get:
+      summary: Get all user accounts
+      operationId: getAccounts
+      security: [ { bearerAuth: [] } ]
+      responses:
+        "200":
+          description: Accounts list returned
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        "401": { description: Unauthorized }
+
+    post:
+      summary: Create new account
+      operationId: createAccount
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+
+  /accounts/{id}:
+    put:
+      summary: Update account
+      operationId: updateAccount
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountRequest'
+      responses:
+        "200":
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericResponse'
+        "404": { description: Account not found }
+
+    delete:
+      summary: Delete account
+      operationId: deleteAccount
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Account deleted }
+        "404": { description: Account not found }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      properties:
+        username: { type: string }
+        password: { type: string }
+
+    LoginRequest:
+      type: object
+      properties:
+        username: { type: string }
+        password: { type: string }
+
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string }
+        message: { type: string }
+
+    AccountRequest:
+      type: object
+      properties:
+        accountName: { type: string }
+        login: { type: string }
+        password: { type: string }
+        url: { type: string }
+        notes: { type: string }
+
+    Account:
+      type: object
+      properties:
+        id: { type: integer }
+        accountName: { type: string }
+        login: { type: string }
+        password: { type: string }
+        url: { type: string }
+        notes: { type: string }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+
+    GenericResponse:
+      type: object
+      properties:
+        message: { type: string }
