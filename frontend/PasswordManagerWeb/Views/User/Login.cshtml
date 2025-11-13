@@ -1,0 +1,25 @@
+@{
+    ViewData["Title"] = "Login";
+}
+
+<h2>Login</h2>
+
+@if (ViewData["Error"] != null)
+{
+    <div style="color:red">@ViewData["Error"]</div>
+}
+
+@if (ViewData["Message"] != null)
+{
+    <div style="color:green">@ViewData["Message"]</div>
+}
+
+<form method="post" asp-controller="User" asp-action="Login">
+    <label for="username">Username:</label><br />
+    <input type="text" id="username" name="username" required /><br />
+
+    <label for="password">Password:</label><br />
+    <input type="password" id="password" name="password" required /><br /><br />
+
+    <button type="submit">Login</button>
+</form>
