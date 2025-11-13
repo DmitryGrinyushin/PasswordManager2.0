@@ -37,7 +37,14 @@ namespace PasswordManagerWeb.Controllers
                 if (response.IsSuccessStatusCode)
                 {
                     var responseContent = await response.Content.ReadAsStringAsync();
-                    dynamic result = JsonConvert.DeserializeObject(responseContent);
+                    dynamic? result = JsonConvert.DeserializeObject(responseContent);
+
+                    if (result == null)
+                    {
+                        ViewData["Error"] = "Failed to parse response from server.";
+                        return View();
+                    }
+            
                     string token = result.token;
 
                     ViewData["Message"] = $"Login successful! Token: {token}";
